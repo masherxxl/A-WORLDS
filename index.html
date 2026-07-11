@@ -104,9 +104,9 @@
       opacity: 0;
       filter: blur(2px);
       transition:
-        opacity .68s ease,
-        filter .68s ease,
-        transform .68s ease;
+        opacity .34s ease,
+        filter .34s ease,
+        transform .34s ease;
     }
 
     .text-layer.rise-away {
@@ -114,9 +114,9 @@
       filter: blur(3px);
       transform: translate(-50%, calc(-50% - 60px));
       transition:
-        opacity 1.25s ease,
-        filter 1.25s ease,
-        transform 1.25s cubic-bezier(.2, .72, .2, 1);
+        opacity .625s ease,
+        filter .625s ease,
+        transform .625s cubic-bezier(.2, .72, .2, 1);
     }
 
     .typed-word {
@@ -1559,7 +1559,7 @@
 
     async function fadeOutText(element, options = {}) {
       const fadeClass = options.rise ? "rise-away" : "fade-out";
-      const duration = options.duration ?? (options.rise ? 1260 : 700);
+      const duration = options.duration ?? (options.rise ? 630 : 350);
 
       /* 혹시 남아 있을 수 있는 인라인 값이 전환을 막지 않게 다시 한 번 정리 */
       element.style.removeProperty("opacity");
@@ -1640,7 +1640,7 @@
       }
 
       await fadeOutText(narration, {
-        duration: options.fadeDuration ?? 700
+        duration: options.fadeDuration ?? 350
       });
 
       await sleep(options.gap ?? PAGE_GAP_MS);
@@ -1682,7 +1682,7 @@
 
       const result = await askChoice(labels);
 
-      await fadeOutText(narration, { duration: 420 });
+      await fadeOutText(narration, { duration: 210 });
       await sleep(options.gap ?? 650);
 
       return result;
@@ -1727,7 +1727,7 @@
       ]);
 
       await sleep(3000);
-      await fadeOutText(narration, { duration: 680 });
+      await fadeOutText(narration, { duration: 340 });
       await sleep(900);
 
       prepareTextLayer(narration);
@@ -1751,7 +1751,7 @@
       const boxPromise = activateBox();
       const textPromise = fadeOutText(narration, {
         rise: true,
-        duration: 1260
+        duration: 630
       });
 
       await Promise.all([boxPromise, textPromise]);
@@ -1816,7 +1816,7 @@
       ]);
 
       await sleep(900);
-      await fadeOutText(narration, { duration: 900 });
+      await fadeOutText(narration, { duration: 450 });
       await sleep(1500);
 
       /* 2. 이제는 부분만 느리고, 이후 정상 속도 */
@@ -2070,7 +2070,7 @@
       }
 
       await fadeOutText(createdText, {
-        duration: options.fadeDuration ?? 700
+        duration: options.fadeDuration ?? 350
       });
 
       /* 특수 지정이 없는 모든 생성 이후 대사도 다음 출력 전 2초 유지 */
@@ -2301,7 +2301,7 @@
       ]);
 
       await sleep(3200);
-      await fadeOutText(cancelText, { duration: 700 });
+      await fadeOutText(cancelText, { duration: 350 });
       enterDeadState();
     }
 
