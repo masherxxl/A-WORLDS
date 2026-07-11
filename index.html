@@ -19,15 +19,17 @@
     :root {
       --bg: #000;
       --fg: #fff;
-      --text-size: clamp(21px, 5.15vw, 36px);
-      --created-text-size: clamp(20px, 5vw, 34px);
-      --final-text-size: clamp(23px, 5.8vw, 42px);
-      --small-text-size: clamp(12px, 3vw, 18px);
+      --text-size: clamp(20px, 5.15vw, 37px);
+      --choice-size: clamp(16px, 4.15vw, 29px);
+      --small-size: clamp(12px, 3vw, 18px);
+      --final-size: clamp(22px, 5.2vw, 38px);
       --letter-space: .045em;
-      --box-size: clamp(54px, 15vw, 94px);
+      --box-size: clamp(62px, 17vw, 112px);
       --hold-progress: 0;
-      --shake-x: 0px;
-      --shake-y: 0px;
+      --screen-x: 0px;
+      --screen-y: 0px;
+      --box-x: 0px;
+      --box-y: 0px;
     }
 
     * {
@@ -56,7 +58,7 @@
 
     button {
       font: inherit;
-      color: inherit;
+      letter-spacing: inherit;
     }
 
     [hidden] {
@@ -68,314 +70,415 @@
       inset: 0;
       overflow: hidden;
       background: #000;
-      transform: translate(var(--shake-x), var(--shake-y));
+      transform: translate(var(--screen-x), var(--screen-y));
     }
 
-    .narration {
+    /* ------------------------------
+       공통 텍스트 무대
+    ------------------------------ */
+
+    .text-layer {
       position: absolute;
       left: 50%;
       top: 40%;
-      z-index: 5;
-      width: min(84vw, 760px);
-      transform: translate(-50%, -50%);
+      z-index: 20;
+      width: min(85vw, 760px);
+      min-height: 1.5em;
       color: #fff;
       font-size: var(--text-size);
-      line-height: 1.56;
+      line-height: 1.54;
       text-align: center;
-      white-space: normal;
+      white-space: pre-wrap;
       word-break: keep-all;
       overflow-wrap: break-word;
-      opacity: 0;
-      filter: blur(1px);
-      transition:
-        opacity .18s steps(2, end),
-        filter .18s steps(2, end);
+      opacity: 1;
+      transform: translate(-50%, -50%);
+      filter: blur(0);
       pointer-events: none;
       text-shadow:
-        0 0 5px rgba(255,255,255,.72),
-        0 0 15px rgba(255,255,255,.23);
+        0 0 4px rgba(255, 255, 255, .72),
+        0 0 14px rgba(255, 255, 255, .22);
     }
 
-    .narration.visible {
-      opacity: 1;
-      filter: blur(0);
-    }
-
-    .narration.clearing {
+    .text-layer.fade-out {
       opacity: 0;
       filter: blur(2px);
+      transition:
+        opacity .68s ease,
+        filter .68s ease,
+        transform .68s ease;
     }
 
-    .created-text {
-      position: absolute;
-      left: 50%;
-      top: 64%;
-      z-index: 45;
-      width: min(84vw, 760px);
-      transform: translateX(-50%);
-      color: #fff;
-      font-size: var(--created-text-size);
-      line-height: 1.55;
-      text-align: center;
-      white-space: normal;
-      word-break: keep-all;
-      overflow-wrap: break-word;
+    .text-layer.rise-away {
       opacity: 0;
-      transition: opacity .18s steps(2, end);
-      text-shadow:
-        0 0 5px rgba(255,255,255,.72),
-        0 0 15px rgba(255,255,255,.22);
+      filter: blur(3px);
+      transform: translate(-50%, calc(-50% - 60px));
+      transition:
+        opacity 1.25s ease,
+        filter 1.25s ease,
+        transform 1.25s cubic-bezier(.2, .72, .2, 1);
     }
 
-    .created-text.visible {
-      opacity: 1;
-    }
-
-    .type-tick {
-      animation: undertale-box-tick .035s steps(1, end) both;
-    }
-
-    @keyframes undertale-box-tick {
-      0% {
-        filter: brightness(1);
-      }
-
-      50% {
-        filter: brightness(1.28);
-      }
-
-      100% {
-        filter: brightness(1);
-      }
+    .typed-word {
+      display: inline-block;
+      white-space: nowrap;
     }
 
     .typed-char {
-      display: inline;
+      display: inline-block;
+      min-width: .01em;
       opacity: 0;
-      animation: undertale-char-in .001s steps(1, end) forwards;
-      text-shadow:
-        0 0 3px rgba(255,255,255,.74),
-        0 0 9px rgba(255,255,255,.18);
+      transform-origin: 50% 70%;
+      animation:
+        char-appear .035s steps(1, end) forwards,
+        char-tremble var(--duration) steps(2, end) var(--delay) infinite;
     }
 
-    @keyframes undertale-char-in {
+    @keyframes char-appear {
       to {
         opacity: 1;
       }
     }
 
-    #touch-hint {
+    /* typing-lab의 글자별 독립 떨림 방식 */
+    @keyframes char-tremble {
+      0%,
+      100% {
+        transform: translate(0, 0) rotate(0deg);
+      }
+
+      25% {
+        transform: translate(var(--x1), var(--y1)) rotate(var(--r1));
+      }
+
+      55% {
+        transform: translate(var(--x2), var(--y2)) rotate(var(--r2));
+      }
+
+      75% {
+        transform: translate(var(--x3), var(--y3)) rotate(var(--r3));
+      }
+    }
+
+    .final-char {
+      display: inline-block;
+      min-width: .01em;
+      opacity: 0;
+      animation: final-char-appear .01s steps(1, end) forwards;
+    }
+
+    @keyframes final-char-appear {
+      to {
+        opacity: 1;
+      }
+    }
+
+    /* ------------------------------
+       1회용 안내 문구 / 길게 안내
+    ------------------------------ */
+
+    #guide-hint {
       position: fixed;
       left: 50%;
-      top: 63%;
-      z-index: 8;
-      transform: translate(-50%, -50%);
-      color: rgba(255,255,255,.72);
-      font-size: var(--small-text-size);
-      letter-spacing: .18em;
-      text-shadow:
-        0 0 5px rgba(255,255,255,.84),
-        0 0 18px rgba(255,255,255,.42);
+      top: 62.5%;
+      z-index: 45;
+      color: rgba(255, 255, 255, .76);
+      font-size: var(--small-size);
+      letter-spacing: .17em;
       opacity: 0;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      text-shadow:
+        -2px 0 7px rgba(255, 255, 255, .25),
+        2px 0 7px rgba(255, 255, 255, .22),
+        0 0 7px rgba(255, 255, 255, .92),
+        0 0 23px rgba(255, 255, 255, .52);
+    }
+
+    #guide-hint.visible {
+      animation: guide-ghost 1.9s ease-in-out infinite;
+    }
+
+    #guide-hint.hiding {
+      opacity: 0 !important;
+      transition: opacity .8s ease;
+      animation: none;
+    }
+
+    @keyframes guide-ghost {
+      0%,
+      100% {
+        opacity: .34;
+        transform: translate(calc(-50% - 3px), -50%);
+        filter: blur(.1px);
+      }
+
+      35% {
+        opacity: .82;
+        transform: translate(calc(-50% + 2px), calc(-50% - 1px));
+        filter: blur(0);
+      }
+
+      70% {
+        opacity: .48;
+        transform: translate(calc(-50% - 1px), calc(-50% + 1px));
+        filter: blur(.35px);
+      }
+    }
+
+    /* ------------------------------
+       선택지
+    ------------------------------ */
+
+    #choice-panel {
+      position: absolute;
+      left: 50%;
+      top: 59%;
+      z-index: 42;
+      width: min(84vw, 620px);
+      display: grid;
+      justify-items: center;
+      gap: 14px;
+      opacity: 0;
+      transform: translate(-50%, 8px);
       pointer-events: none;
     }
 
-    #touch-hint.visible {
-      animation: touch-hint-drift 1.8s ease-in-out infinite;
+    #choice-panel.visible {
+      opacity: 1;
+      transform: translate(-50%, 0);
+      pointer-events: auto;
+      animation: choice-panel-in .18s steps(2, end) both;
     }
 
-    @keyframes touch-hint-drift {
-      0%,
+    @keyframes choice-panel-in {
+      0% {
+        opacity: 0;
+        filter: brightness(2);
+        transform: translate(calc(-50% - 4px), 0);
+      }
+
+      45% {
+        opacity: .45;
+        filter: brightness(.5);
+        transform: translate(calc(-50% + 3px), 0);
+      }
+
       100% {
-        opacity: .28;
-        transform: translate(-50%, -50%) translateX(-2px);
-      }
-
-      50% {
-        opacity: .9;
-        transform: translate(-50%, -50%) translateX(2px);
+        opacity: 1;
+        filter: brightness(1);
+        transform: translate(-50%, 0);
       }
     }
 
-    .box-stage {
+    .choice-button {
+      width: max-content;
+      max-width: 100%;
+      border: 0;
+      padding: 7px 12px;
+      background: transparent;
+      color: rgba(255, 255, 255, .82);
+      font-size: var(--choice-size);
+      line-height: 1.2;
+      cursor: pointer;
+      text-align: center;
+      white-space: nowrap;
+      text-shadow:
+        0 0 4px rgba(255, 255, 255, .56),
+        0 0 13px rgba(255, 255, 255, .16);
+    }
+
+    .choice-button::before {
+      content: "•";
+      margin-right: .45em;
+      opacity: .38;
+    }
+
+    .choice-button:active,
+    .choice-button:focus-visible {
+      outline: 0;
+      color: #fff;
+      transform: translateX(2px);
+      text-shadow:
+        0 0 7px rgba(255, 255, 255, 1),
+        0 0 22px rgba(255, 255, 255, .56);
+    }
+
+    /* ------------------------------
+       상자 무대
+    ------------------------------ */
+
+    #box-stage {
       position: absolute;
       inset: 0;
       z-index: 10;
-      display: grid;
-      place-items: center;
-      opacity: 0;
-      transition: opacity 1.05s ease;
-    }
-
-    .box-stage.visible {
-      opacity: 1;
-    }
-
-    .box-wrap {
-      position: relative;
-      width: calc(var(--box-size) * 2.8);
-      height: calc(var(--box-size) * 2.8);
-      display: grid;
-      place-items: center;
-      transform: translateY(-2vh);
-    }
-
-    .seed-aura {
-      position: absolute;
-      width: calc(var(--box-size) * 1.9);
-      height: calc(var(--box-size) * 1.9);
-      border-radius: 50%;
-      background:
-        radial-gradient(circle, rgba(255,255,255,.2) 0 4%, transparent 5% 100%),
-        radial-gradient(circle, rgba(255,255,255,.13), transparent 64%);
-      opacity: .38;
-      filter: blur(1px);
-      animation: aura-breathe 3.6s ease-in-out infinite;
       pointer-events: none;
     }
 
-    @keyframes aura-breathe {
+    #box-positioner {
+      position: absolute;
+      left: 50%;
+      top: 70%;
+      width: calc(var(--box-size) * 3.2);
+      height: calc(var(--box-size) * 3.2);
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(.64);
+      transition:
+        top 1.5s cubic-bezier(.16, .76, .22, 1),
+        opacity 1.35s ease,
+        transform 1.5s cubic-bezier(.16, .76, .22, 1),
+        filter 1.5s ease;
+    }
+
+    #box-stage.foreshadow #box-positioner {
+      opacity: .2;
+      filter: blur(.35px) brightness(.75);
+    }
+
+    #box-stage.ready {
+      pointer-events: auto;
+    }
+
+    #box-stage.ready #box-positioner {
+      top: 51%;
+      opacity: 1;
+      filter: blur(0) brightness(1);
+      transform: translate(-50%, -50%) scale(1.08);
+    }
+
+    #box-drifter {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      animation: box-foreshadow-drift 4.8s ease-in-out infinite;
+    }
+
+    #box-stage.ready #box-drifter {
+      animation: box-ready-drift 3.6s ease-in-out infinite;
+    }
+
+    #box-stage.holding #box-drifter {
+      animation: none;
+      transform: translate(var(--box-x), var(--box-y));
+    }
+
+    @keyframes box-foreshadow-drift {
       0%,
       100% {
-        opacity: .22;
-        transform: scale(.9);
+        transform: translate(-5px, 2px) rotate(-1deg);
       }
 
       50% {
-        opacity: .52;
-        transform: scale(1.08);
+        transform: translate(6px, -3px) rotate(1deg);
       }
     }
 
-    .seed-box {
+    @keyframes box-ready-drift {
+      0%,
+      100% {
+        transform: translate(-2px, 1px) scale(1);
+      }
+
+      50% {
+        transform: translate(3px, -3px) scale(1.025);
+      }
+    }
+
+    #seed-box {
       position: relative;
       width: var(--box-size);
       height: var(--box-size);
-      border: 2px solid rgba(255,255,255,.78);
+      padding: 0;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      outline: 0;
+      touch-action: none;
+    }
+
+    #seed-box:disabled {
+      cursor: default;
+    }
+
+    #box-fallback {
+      position: absolute;
+      inset: 0;
+      border: 2px solid rgba(255, 255, 255, .78);
       background:
-        linear-gradient(135deg, rgba(255,255,255,.07), rgba(255,255,255,0) 45%),
+        linear-gradient(135deg, rgba(255, 255, 255, .1), transparent 44%),
         #050505;
       box-shadow:
         inset 0 0 0 1px #000,
-        0 0 12px rgba(255,255,255,.18),
-        0 0 34px rgba(255,255,255,.06);
-      cursor: pointer;
-      opacity: .92;
-      animation: box-breathe 3.2s ease-in-out infinite;
-      outline: 0;
+        0 0 13px rgba(255, 255, 255, .2),
+        0 0 38px rgba(255, 255, 255, .07);
     }
 
-    .seed-box::before,
-    .seed-box::after {
+    #box-fallback::before,
+    #box-fallback::after {
       position: absolute;
       inset: 0;
       content: "";
+      opacity: calc(var(--hold-progress) * .96);
       pointer-events: none;
     }
 
-    .seed-box::before {
+    #box-fallback::before {
       background:
-        linear-gradient(
-          90deg,
-          transparent 0 47%,
-          rgba(255,255,255, calc(.12 + var(--hold-progress) * .5)) 48% 52%,
-          transparent 53% 100%
-        ),
-        linear-gradient(
-          0deg,
-          transparent 0 48%,
-          rgba(255,255,255, calc(.08 + var(--hold-progress) * .34)) 49% 51%,
-          transparent 52% 100%
-        );
-      opacity: calc(var(--hold-progress) * 1.2);
+        linear-gradient(37deg, transparent 47%, rgba(255, 255, 255, .8) 48% 49%, transparent 50%),
+        linear-gradient(-52deg, transparent 46%, rgba(255, 255, 255, .54) 47% 48%, transparent 49%);
+      filter: brightness(calc(1 + var(--hold-progress) * 1.4));
     }
 
-    .seed-box::after {
-      border: 1px solid rgba(255,255,255, calc(.12 + var(--hold-progress) * .55));
+    #box-fallback::after {
+      border: 1px solid rgba(255, 255, 255, calc(.1 + var(--hold-progress) * .72));
       transform: scale(calc(1 + var(--hold-progress) * .22));
-      opacity: calc(.2 + var(--hold-progress) * .9);
-      filter: blur(calc(var(--hold-progress) * 1.2px));
+      filter: blur(calc(var(--hold-progress) * .85px));
     }
 
-    .box-stage.holding .seed-box {
-      animation: none;
-      box-shadow:
-        inset 0 0 0 1px #000,
-        0 0 calc(14px + var(--hold-progress) * 40px) rgba(255,255,255, calc(.2 + var(--hold-progress) * .62)),
-        0 0 calc(40px + var(--hold-progress) * 90px) rgba(255,255,255, calc(.05 + var(--hold-progress) * .22));
+    #box-frame-image {
+      position: absolute;
+      inset: 0;
+      display: none;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      image-rendering: pixelated;
       filter:
-        brightness(calc(1 + var(--hold-progress) * 2.2))
-        contrast(calc(1 + var(--hold-progress) * .8));
+        brightness(calc(1 + var(--hold-progress) * 1.35))
+        drop-shadow(0 0 calc(8px + var(--hold-progress) * 24px) rgba(255, 255, 255, .48));
+      pointer-events: none;
     }
 
-    @keyframes box-breathe {
-      0%,
-      100% {
-        transform: translateY(0) scale(1);
-        filter: brightness(1);
-      }
-
-      50% {
-        transform: translateY(-3px) scale(1.025);
-        filter: brightness(1.16);
-      }
+    #box-frame-image.loaded {
+      display: block;
     }
 
-    .crack {
+    #box-frame-image.loaded + #box-fallback {
+      opacity: 0;
+    }
+
+    #box-stage.holding #seed-box {
+      filter:
+        brightness(calc(1 + var(--hold-progress) * 1.7))
+        contrast(calc(1 + var(--hold-progress) * .45));
+    }
+
+    .box-aura {
       position: absolute;
       left: 50%;
       top: 50%;
-      width: 2px;
-      height: calc(var(--box-size) * .68);
-      background: rgba(255,255,255,.88);
-      opacity: 0;
-      transform-origin: center;
-      filter: blur(.2px);
+      width: calc(var(--box-size) * 2.1);
+      height: calc(var(--box-size) * 2.1);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 255, 255, .2), transparent 66%);
+      opacity: calc(.18 + var(--hold-progress) * .68);
+      transform: translate(-50%, -50%) scale(calc(.84 + var(--hold-progress) * .5));
+      filter: blur(calc(2px + var(--hold-progress) * 5px));
       pointer-events: none;
     }
 
-    .box-stage.hold-mid .crack.one {
-      opacity: .62;
-      transform: translate(-50%, -50%) rotate(34deg);
-    }
-
-    .box-stage.hold-mid .crack.two {
-      opacity: .42;
-      transform: translate(-50%, -50%) rotate(-51deg) scaleY(.72);
-    }
-
-    .box-stage.hold-high .crack.three {
-      opacity: .76;
-      transform: translate(-50%, -50%) rotate(88deg) scaleY(.8);
-    }
-
-    .noise-field {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      pointer-events: none;
-      background:
-        repeating-linear-gradient(
-          0deg,
-          rgba(255,255,255,.05) 0 1px,
-          transparent 1px 4px
-        );
-      mix-blend-mode: screen;
-    }
-
-    .box-stage.hold-high .noise-field {
-      opacity: .18;
-      animation: noise-flicker .16s steps(2, end) infinite;
-    }
-
-    @keyframes noise-flicker {
-      50% {
-        opacity: .38;
-        transform: translateX(2px);
-      }
-    }
-
-    .hold-particle {
+    .leak-particle {
       position: absolute;
       left: 50%;
       top: 50%;
@@ -384,134 +487,92 @@
       border-radius: 50%;
       background: #fff;
       opacity: 0;
-      transform: translate(-50%, -50%);
       pointer-events: none;
     }
 
-    .box-stage.hold-high .hold-particle {
-      animation: leak-particle 1.1s ease-out infinite;
-      animation-delay: var(--delay);
+    #box-stage.holding.high .leak-particle {
+      animation: leak 1s ease-out var(--pd) infinite;
     }
 
-    @keyframes leak-particle {
+    @keyframes leak {
       0% {
         opacity: 0;
-        transform: translate(-50%, -50%) rotate(var(--angle)) translateX(22px) scale(.3);
+        transform: translate(-50%, -50%) rotate(var(--pa)) translateX(28px) scale(.3);
       }
 
       20% {
-        opacity: .85;
+        opacity: .86;
       }
 
       100% {
         opacity: 0;
-        transform: translate(-50%, -50%) rotate(var(--angle)) translateX(calc(58px + var(--hold-progress) * 50px)) scale(1);
+        transform: translate(-50%, -50%) rotate(var(--pa)) translateX(calc(72px + var(--hold-progress) * 70px)) scale(1.3);
       }
     }
 
-    .step-back {
-      position: absolute;
-      left: 50%;
-      bottom: 9vh;
-      transform: translateX(-50%);
-      border: 0;
-      background: transparent;
-      color: rgba(255,255,255,.34);
-      font-size: var(--small-text-size);
-      letter-spacing: .08em;
-      opacity: 0;
-      cursor: pointer;
-      transition: opacity .9s ease, color .4s ease;
-    }
+    /* ------------------------------
+       폭발 / 화이트아웃
+    ------------------------------ */
 
-    .step-back.visible {
-      opacity: 1;
-    }
-
-    .particle-layer {
+    #particle-layer {
       position: absolute;
       inset: 0;
-      z-index: 30;
-      pointer-events: none;
+      z-index: 60;
       overflow: hidden;
+      pointer-events: none;
     }
 
     .burst-line,
-    .burst-piece {
+    .burst-piece,
+    .afterglow-piece {
       position: absolute;
       left: 50%;
       top: 50%;
-      opacity: 0;
-      pointer-events: none;
-      transform: translate(-50%, -50%);
       background: #fff;
+      pointer-events: none;
     }
 
     .burst-line {
       width: var(--length);
       height: 2px;
-      transform:
-        translate(-50%, -50%)
-        rotate(var(--angle))
-        translateX(var(--distance));
-      animation: burst-line .58s cubic-bezier(.08, .76, .25, 1) forwards;
-      animation-delay: var(--delay);
-      box-shadow: 0 0 12px rgba(255,255,255,.8);
+      opacity: 0;
+      box-shadow: 0 0 12px rgba(255, 255, 255, .9);
+      animation: burst-line .62s cubic-bezier(.05, .76, .2, 1) var(--delay) forwards;
     }
 
     @keyframes burst-line {
       0% {
         opacity: 0;
-        transform:
-          translate(-50%, -50%)
-          rotate(var(--angle))
-          translateX(0)
-          scaleX(.05);
+        transform: translate(-50%, -50%) rotate(var(--angle)) translateX(0) scaleX(.03);
       }
 
-      16% {
+      13% {
         opacity: 1;
       }
 
       100% {
         opacity: 0;
-        transform:
-          translate(-50%, -50%)
-          rotate(var(--angle))
-          translateX(var(--distance))
-          scaleX(1);
+        transform: translate(-50%, -50%) rotate(var(--angle)) translateX(var(--distance)) scaleX(1);
       }
     }
 
     .burst-piece {
       width: var(--size);
       height: var(--size);
-      transform:
-        translate(-50%, -50%)
-        rotate(var(--angle))
-        translateX(0);
-      animation: burst-piece .92s cubic-bezier(.07, .72, .19, 1) forwards;
-      animation-delay: var(--delay);
-      box-shadow: 0 0 8px rgba(255,255,255,.8);
+      opacity: 0;
+      box-shadow: 0 0 8px rgba(255, 255, 255, .78);
+      animation: burst-piece .9s cubic-bezier(.06, .72, .16, 1) var(--delay) forwards;
     }
 
     @keyframes burst-piece {
       0% {
         opacity: 1;
-        transform:
-          translate(-50%, -50%)
-          rotate(var(--angle))
-          translateX(0)
-          rotate(0deg);
+        transform: translate(-50%, -50%) rotate(var(--angle)) translateX(0) rotate(0deg);
       }
 
       100% {
         opacity: 0;
-        transform:
-          translate(-50%, -50%)
-          rotate(var(--angle))
-          translateX(var(--distance))
-          rotate(var(--spin));
+        transform: translate(-50%, -50%) rotate(var(--angle)) translateX(var(--distance)) rotate(var(--spin));
       }
     }
 
@@ -519,80 +580,78 @@
       position: absolute;
       left: 50%;
       top: 50%;
-      width: 30px;
-      height: 30px;
-      border: 2px solid rgba(255,255,255,.9);
+      width: 24px;
+      height: 24px;
+      border: 2px solid rgba(255, 255, 255, .94);
       border-radius: 50%;
-      opacity: 0;
+      opacity: .9;
       transform: translate(-50%, -50%) scale(.2);
-      animation: shockwave .78s ease-out forwards;
       box-shadow:
-        0 0 20px rgba(255,255,255,.7),
-        inset 0 0 20px rgba(255,255,255,.2);
+        0 0 18px rgba(255, 255, 255, .75),
+        inset 0 0 18px rgba(255, 255, 255, .28);
+      animation: shockwave .82s ease-out forwards;
     }
 
     @keyframes shockwave {
-      0% {
-        opacity: .9;
-        transform: translate(-50%, -50%) scale(.2);
-      }
-
-      100% {
+      to {
         opacity: 0;
-        transform: translate(-50%, -50%) scale(24);
+        transform: translate(-50%, -50%) scale(27);
       }
     }
 
-    .whiteout {
+    #whiteout {
       position: fixed;
       inset: 0;
-      z-index: 60;
+      z-index: 80;
       background: #fff;
       opacity: 0;
       pointer-events: none;
-      transition: none;
     }
 
-    .whiteout.active {
+    #whiteout.active {
       opacity: 1;
     }
 
-    .whiteout.fade-away {
-      transition: opacity 1.15s ease;
+    #whiteout.release {
       opacity: 0;
+      transition: opacity 1.15s ease;
     }
 
-    .created-scene {
+    /* ------------------------------
+       생성된 세계
+    ------------------------------ */
+
+    #created-scene {
       position: absolute;
       inset: 0;
-      z-index: 40;
-      display: grid;
-      place-items: center;
+      z-index: 35;
       opacity: 0;
       pointer-events: none;
-      transition: opacity .7s ease;
+      transition: opacity .9s ease;
     }
 
-    .created-scene.visible {
+    #created-scene.visible {
       opacity: 1;
     }
 
-    .hands-world {
-      position: relative;
-      width: min(78vw, 520px);
-      height: min(70vw, 440px);
-      transform: translateY(3vh);
-    }
-
-    .hands {
+    #hands-world {
       position: absolute;
       left: 50%;
-      bottom: 10%;
+      top: 47%;
+      width: min(78vw, 530px);
+      height: min(72vw, 450px);
+      transform: translate(-50%, -50%);
+    }
+
+    #hands {
+      position: absolute;
+      left: 50%;
+      bottom: 3%;
       width: 82%;
-      height: 36%;
+      height: 38%;
       transform: translateX(-50%);
-      opacity: .72;
-      filter: drop-shadow(0 0 8px rgba(255,255,255,.18));
+      opacity: .7;
+      filter: drop-shadow(0 0 8px rgba(255, 255, 255, .18));
     }
 
     .hand {
@@ -600,33 +659,32 @@
       bottom: 0;
       width: 44%;
       height: 78%;
-      border: 2px solid rgba(255,255,255,.78);
+      border: 2px solid rgba(255, 255, 255, .78);
       border-top: 0;
       background: transparent;
     }
 
     .hand.left {
       left: 5%;
+      border-right: 0;
       border-radius: 65% 30% 42% 60%;
       transform: rotate(12deg);
-      border-right: 0;
     }
 
     .hand.right {
       right: 5%;
+      border-left: 0;
       border-radius: 30% 65% 60% 42%;
       transform: rotate(-12deg);
-      border-left: 0;
     }
 
-    .hand.left::before,
-    .hand.right::before {
+    .hand::before {
       position: absolute;
-      top: 5%;
+      top: 7%;
       width: 72%;
       height: 34%;
       content: "";
-      border-top: 2px solid rgba(255,255,255,.62);
+      border-top: 2px solid rgba(255, 255, 255, .62);
       border-radius: 50%;
     }
 
@@ -640,274 +698,206 @@
       transform: rotate(18deg);
     }
 
-    .world-cube {
+    #world-cube {
       position: absolute;
       left: 50%;
-      top: 26%;
-      width: clamp(58px, 15vw, 102px);
-      height: clamp(58px, 15vw, 102px);
+      top: 28%;
+      width: clamp(64px, 16vw, 112px);
+      height: clamp(64px, 16vw, 112px);
       transform-style: preserve-3d;
-      transform: translate(-50%, -50%) rotateX(58deg) rotateZ(45deg);
-      animation: cube-rotate 6s linear infinite;
-      filter: drop-shadow(0 0 16px rgba(255,255,255,.36));
+      animation: world-turn 6s linear infinite;
+      filter: drop-shadow(0 0 16px rgba(255, 255, 255, .36));
     }
 
-    .world-cube::before,
-    .world-cube::after {
+    #world-cube::before,
+    #world-cube::after {
       position: absolute;
       inset: 0;
       content: "";
-      border: 2px solid rgba(255,255,255,.88);
+      border: 2px solid rgba(255, 255, 255, .88);
       background:
-        linear-gradient(135deg, rgba(255,255,255,.18), transparent 40%),
-        rgba(0,0,0,.15);
+        linear-gradient(135deg, rgba(255, 255, 255, .18), transparent 40%),
+        rgba(0, 0, 0, .15);
     }
 
-    .world-cube::after {
-      transform: translateZ(22px);
+    #world-cube::after {
       opacity: .62;
+      transform: translateZ(22px);
     }
 
-    @keyframes cube-rotate {
-      0% {
+    @keyframes world-turn {
+      from {
         transform: translate(-50%, -50%) rotateX(58deg) rotateZ(0deg);
       }
 
-      100% {
+      to {
         transform: translate(-50%, -50%) rotateX(58deg) rotateZ(360deg);
       }
     }
 
-    .world-cube.error-spin {
-      animation: cube-error-spin .12s steps(2, end) infinite;
+    #created-text {
+      top: 68%;
+      z-index: 44;
+      font-size: clamp(19px, 4.9vw, 35px);
     }
 
-    @keyframes cube-error-spin {
-      0% {
-        transform: translate(-50%, -50%) rotateX(58deg) rotateZ(0deg);
-        filter: drop-shadow(0 0 18px rgba(255,255,255,.38));
-      }
+    /* ------------------------------
+       시간 로그 자동 스크롤
+    ------------------------------ */
 
-      50% {
-        transform: translate(calc(-50% - 4px), calc(-50% + 1px)) rotateX(58deg) rotateZ(33deg);
-        filter: drop-shadow(0 0 28px rgba(255,255,255,.7));
-      }
-
-      100% {
-        transform: translate(calc(-50% + 3px), calc(-50% - 2px)) rotateX(58deg) rotateZ(78deg);
-        filter: drop-shadow(0 0 13px rgba(255,255,255,.22));
-      }
-    }
-
-    .logs {
+    #timeline-window {
       position: absolute;
-      left: 5vw;
-      top: 12vh;
-      z-index: 45;
-      display: grid;
-      gap: 6px;
-      color: rgba(255,255,255,.42);
-      font-size: clamp(11px, 2.7vw, 17px);
+      left: 5.5vw;
+      top: 7vh;
+      z-index: 47;
+      width: min(60vw, 430px);
+      height: min(34vh, 280px);
+      padding: 12px 14px;
+      border-left: 1px solid rgba(255, 255, 255, .18);
+      background: linear-gradient(90deg, rgba(255, 255, 255, .025), transparent 82%);
       opacity: 0;
-      pointer-events: none;
-    }
-
-    .logs.visible {
-      opacity: 1;
-    }
-
-    .log-line {
-      opacity: 0;
+      overflow: hidden;
       transform: translateX(-8px);
-      animation: log-in .22s steps(2, end) forwards;
+      pointer-events: none;
+      mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
+      transition: opacity .45s ease, transform .45s ease;
     }
 
-    .log-line.error {
-      color: rgba(255,255,255,.9);
-      text-shadow: 0 0 9px rgba(255,255,255,.65);
-      animation: log-error .13s steps(2, end) infinite;
+    #timeline-window.visible {
+      opacity: 1;
+      transform: translateX(0);
     }
 
-    @keyframes log-in {
+    #timeline-feed {
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      scrollbar-width: none;
+      scroll-behavior: smooth;
+      color: rgba(255, 255, 255, .55);
+      font-size: clamp(11px, 2.7vw, 17px);
+      line-height: 1.55;
+      text-align: left;
+      letter-spacing: .08em;
+    }
+
+    #timeline-feed::-webkit-scrollbar {
+      display: none;
+    }
+
+    .day-line {
+      min-height: 1.55em;
+      opacity: 0;
+      transform: translateX(-7px);
+      animation: day-line-in .16s steps(2, end) forwards;
+    }
+
+    @keyframes day-line-in {
       to {
         opacity: 1;
         transform: translateX(0);
       }
     }
 
-    @keyframes log-error {
+    .day-line.corrupt {
+      color: #fff;
+      text-shadow: 0 0 10px rgba(255, 255, 255, .8);
+      animation: corrupt-line .09s steps(2, end) infinite;
+    }
+
+    @keyframes corrupt-line {
       0% {
-        opacity: .9;
+        opacity: .92;
         transform: translateX(0);
       }
 
       50% {
-        opacity: .24;
-        transform: translateX(-4px);
+        opacity: .2;
+        transform: translateX(-5px);
       }
 
       100% {
-        opacity: .8;
-        transform: translateX(3px);
+        opacity: .72;
+        transform: translateX(4px);
       }
     }
 
-    .system-line {
-      position: absolute;
-      right: 5vw;
-      bottom: 18vh;
-      z-index: 46;
-      color: rgba(255,255,255,.72);
-      font-size: clamp(11px, 2.6vw, 16px);
-      letter-spacing: .12em;
-      opacity: 0;
-      text-transform: lowercase;
-      pointer-events: none;
-    }
+    /* ------------------------------
+       에러 / 하드컷 / 최종 문장
+    ------------------------------ */
 
-    .system-line.visible {
-      opacity: 1;
-      animation: system-glitch .18s steps(2, end) infinite;
-    }
-
-    @keyframes system-glitch {
-      50% {
-        opacity: .24;
-        transform: translateX(-5px);
-        filter: blur(.8px);
-      }
-    }
-
-    .glitch-overlay {
+    #glitch-overlay {
       position: fixed;
       inset: 0;
-      z-index: 66;
+      z-index: 65;
       opacity: 0;
       pointer-events: none;
       background:
-        repeating-linear-gradient(
-          0deg,
-          rgba(255,255,255,.08) 0 1px,
-          transparent 1px 5px
-        );
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, .07) 0 1px, transparent 1px 5px),
+        linear-gradient(90deg, transparent 0 42%, rgba(255, 255, 255, .08) 43% 46%, transparent 47%);
       mix-blend-mode: screen;
     }
 
-    .glitch-overlay.active {
-      opacity: .35;
-      animation: screen-error .12s steps(2, end) infinite;
+    #glitch-overlay.active {
+      opacity: .42;
+      animation: screen-glitch .09s steps(2, end) infinite;
     }
 
-    @keyframes screen-error {
+    @keyframes screen-glitch {
       0% {
-        transform: translateX(0);
-        opacity: .2;
+        transform: translateX(0) scaleY(1);
+        filter: contrast(1);
       }
 
       50% {
-        transform: translateX(-7px);
-        opacity: .55;
+        transform: translateX(-7px) scaleY(1.02);
+        filter: contrast(2.2);
       }
 
       100% {
-        transform: translateX(5px);
-        opacity: .32;
+        transform: translateX(5px) scaleY(.98);
+        filter: contrast(1.4);
       }
     }
 
-    .hard-cut {
+    #hard-black {
       position: fixed;
       inset: 0;
-      z-index: 69;
+      z-index: 90;
       display: none;
       background: #000;
       pointer-events: none;
     }
 
-    .hard-cut.active {
+    #hard-black.active {
       display: block;
     }
 
-    .final-text {
-      position: absolute;
-      left: 50%;
-      top: 48%;
-      z-index: 70;
-      width: min(86vw, 760px);
-      transform: translate(-50%, -50%);
-      color: #fff;
-      font-size: var(--final-text-size);
-      line-height: 1.42;
-      text-align: center;
-      white-space: normal;
-      word-break: keep-all;
-      overflow-wrap: break-word;
-      opacity: 0;
-      pointer-events: none;
-      text-shadow:
-        0 0 4px rgba(255,255,255,.95),
-        0 0 14px rgba(255,255,255,.68),
-        0 0 30px rgba(255,255,255,.32);
+    #final-text {
+      top: 49%;
+      z-index: 95;
+      width: min(82vw, 700px);
+      font-size: var(--final-size);
+      line-height: 1.48;
+      text-shadow: none;
     }
 
-    .final-text.visible {
-      opacity: 1;
-    }
-
-    .final-char {
-      display: inline-block;
-      opacity: 0;
-      min-width: .01em;
-      transform: translate(var(--fx1), var(--fy1));
-      animation:
-        final-char-in .001s steps(1, end) forwards,
-        final-char-drift var(--fd) ease-in-out infinite alternate;
-      animation-delay: 0s, var(--delay);
-      text-shadow:
-        0 0 4px rgba(255,255,255,.95),
-        0 0 13px rgba(255,255,255,.75),
-        0 0 30px rgba(255,255,255,.35);
-    }
-
-    @keyframes final-char-in {
-      to {
-        opacity: 1;
-      }
-    }
-
-    @keyframes final-char-drift {
-      0% {
-        transform: translate(var(--fx1), var(--fy1));
-        filter: brightness(.95);
-      }
-
-      50% {
-        transform: translate(var(--fx2), var(--fy2));
-        filter: brightness(1.34);
-      }
-
-      100% {
-        transform: translate(var(--fx3), var(--fy3));
-        filter: brightness(1.05);
-      }
-    }
-
-    .tv-line {
+    #tv-line {
       position: fixed;
       left: 50%;
       top: 50%;
-      z-index: 80;
+      z-index: 110;
       width: 0;
-      height: 2px;
-      background: #fff;
+      height: 1px;
       opacity: 0;
+      background: #fff;
       transform: translate(-50%, -50%);
-      box-shadow: 0 0 20px rgba(255,255,255,.9);
+      box-shadow: 0 0 18px rgba(255, 255, 255, .88);
       pointer-events: none;
     }
 
-    .tv-line.active {
-      animation: tv-off .58s cubic-bezier(.2, .7, .2, 1) forwards;
+    #tv-line.active {
+      animation: tv-off .58s cubic-bezier(.2, .72, .2, 1) forwards;
     }
 
     @keyframes tv-off {
@@ -917,7 +907,7 @@
         opacity: .9;
       }
 
-      45% {
+      46% {
         width: 100vw;
         height: 2px;
         opacity: 1;
@@ -936,46 +926,51 @@
       }
     }
 
-    .dead-overlay {
+    #cancel-text {
+      top: 48%;
+      z-index: 100;
+      font-size: clamp(18px, 4.7vw, 32px);
+      line-height: 1.55;
+    }
+
+    #dead-overlay {
       position: fixed;
       inset: 0;
-      z-index: 100;
+      z-index: 150;
       display: none;
       background: #000;
       pointer-events: all;
       cursor: none;
     }
 
-    .dead-overlay.active {
+    #dead-overlay.active {
       display: block;
     }
 
-    .revisit {
+    #revisit {
       position: fixed;
       inset: 0;
-      z-index: 120;
+      z-index: 160;
       display: none;
       place-items: center;
       background: #000;
       pointer-events: all;
     }
 
-    .revisit.active {
+    #revisit.active {
       display: grid;
     }
 
-    .revisit-text {
-      width: min(88vw, 760px);
+    #revisit-text {
+      width: min(86vw, 720px);
       color: #fff;
-      font-size: clamp(22px, 5.5vw, 42px);
-      line-height: 1.35;
+      font-size: clamp(21px, 5.3vw, 40px);
+      line-height: 1.4;
       text-align: center;
-      opacity: .82;
-      filter: blur(.4px);
-      animation: revisit-flicker 2.1s steps(2, end) infinite;
       text-shadow:
-        0 0 5px rgba(255,255,255,.8),
-        0 0 16px rgba(255,255,255,.26);
+        0 0 5px rgba(255, 255, 255, .8),
+        0 0 17px rgba(255, 255, 255, .28);
+      animation: revisit-flicker 2s steps(2, end) infinite;
     }
 
     @keyframes revisit-flicker {
@@ -983,201 +978,269 @@
       12%,
       100% {
         opacity: .9;
-        transform: translate(0, 0);
+        transform: translateX(0);
       }
 
       16% {
-        opacity: .18;
-        transform: translateX(-2px);
+        opacity: .14;
+        transform: translateX(-3px);
       }
 
-      46% {
-        opacity: .35;
+      48% {
+        opacity: .45;
         transform: translateX(3px);
       }
 
-      75% {
+      74% {
         opacity: .08;
       }
     }
 
-    .cancel-text {
-      position: fixed;
-      left: 50%;
-      top: 48%;
-      z-index: 90;
-      width: min(86vw, 600px);
-      transform: translate(-50%, -50%);
-      color: #fff;
-      font-size: clamp(18px, 4.8vw, 34px);
-      line-height: 1.55;
-      text-align: center;
-      white-space: normal;
-      word-break: keep-all;
-      overflow-wrap: break-word;
-      opacity: 0;
-      transition: opacity .24s steps(2, end);
-      pointer-events: none;
-      text-shadow:
-        0 0 5px rgba(255,255,255,.74),
-        0 0 16px rgba(255,255,255,.24);
-    }
+    @media (max-width: 390px) {
+      :root {
+        --text-size: clamp(19px, 5.05vw, 31px);
+        --choice-size: clamp(15px, 3.9vw, 25px);
+      }
 
-    .cancel-text.visible {
-      opacity: 1;
+      .text-layer {
+        width: 88vw;
+      }
+
+      #choice-panel {
+        top: 61%;
+      }
+
+      #timeline-window {
+        width: 72vw;
+        height: 30vh;
+      }
     }
   </style>
 </head>
 
 <body>
   <main id="app" aria-label="a world">
-    <div id="narration" class="narration"></div>
-    <div id="touch-hint">터치</div>
+    <div id="narration" class="text-layer" aria-live="polite"></div>
+    <div id="guide-hint"></div>
 
-    <section id="box-stage" class="box-stage" hidden>
-      <div class="noise-field"></div>
+    <section id="choice-panel" aria-label="선택지"></section>
 
-      <div class="box-wrap">
-        <div class="seed-aura"></div>
+    <section id="box-stage" hidden aria-label="작은 세계 상자">
+      <div id="box-positioner">
+        <div id="box-drifter">
+          <div class="box-aura"></div>
 
-        <button id="seed-box" class="seed-box" type="button" aria-label="작은 상자">
-          <span class="crack one"></span>
-          <span class="crack two"></span>
-          <span class="crack three"></span>
-        </button>
+          <button id="seed-box" type="button" disabled aria-label="작은 상자를 길게 누르기">
+            <img id="box-frame-image" alt="">
+            <span id="box-fallback"></span>
+          </button>
 
-        <span class="hold-particle" style="--angle: 12deg; --delay: .05s;"></span>
-        <span class="hold-particle" style="--angle: 71deg; --delay: .18s;"></span>
-        <span class="hold-particle" style="--angle: 138deg; --delay: .02s;"></span>
-        <span class="hold-particle" style="--angle: 203deg; --delay: .24s;"></span>
-        <span class="hold-particle" style="--angle: 277deg; --delay: .12s;"></span>
-        <span class="hold-particle" style="--angle: 322deg; --delay: .3s;"></span>
+          <span class="leak-particle" style="--pa: 12deg; --pd: .02s;"></span>
+          <span class="leak-particle" style="--pa: 67deg; --pd: .18s;"></span>
+          <span class="leak-particle" style="--pa: 123deg; --pd: .08s;"></span>
+          <span class="leak-particle" style="--pa: 184deg; --pd: .24s;"></span>
+          <span class="leak-particle" style="--pa: 247deg; --pd: .12s;"></span>
+          <span class="leak-particle" style="--pa: 315deg; --pd: .3s;"></span>
+        </div>
       </div>
-
-      <button id="step-back" class="step-back" type="button">step back</button>
     </section>
 
-    <div id="particle-layer" class="particle-layer" aria-hidden="true"></div>
-    <div id="whiteout" class="whiteout" aria-hidden="true"></div>
+    <div id="particle-layer" aria-hidden="true"></div>
+    <div id="whiteout" aria-hidden="true"></div>
 
-    <section id="created-scene" class="created-scene" hidden>
-      <div class="hands-world">
-        <div id="world-cube" class="world-cube"></div>
-
-        <div class="hands">
+    <section id="created-scene" hidden aria-label="생성된 작은 세계">
+      <div id="hands-world">
+        <div id="world-cube"></div>
+        <div id="hands">
           <div class="hand left"></div>
           <div class="hand right"></div>
         </div>
       </div>
 
-      <div id="created-text" class="created-text"></div>
-      <div id="logs" class="logs"></div>
-      <div id="system-line" class="system-line"></div>
+      <div id="created-text" class="text-layer" aria-live="polite"></div>
+
+      <div id="timeline-window" aria-hidden="true">
+        <div id="timeline-feed"></div>
+      </div>
     </section>
 
-    <div id="glitch-overlay" class="glitch-overlay" aria-hidden="true"></div>
-    <div id="hard-cut" class="hard-cut" aria-hidden="true"></div>
-    <div id="final-text" class="final-text"></div>
-    <div id="tv-line" class="tv-line" aria-hidden="true"></div>
-    <div id="cancel-text" class="cancel-text"></div>
+    <div id="glitch-overlay" aria-hidden="true"></div>
+    <div id="hard-black" aria-hidden="true"></div>
+    <div id="final-text" class="text-layer" aria-live="polite"></div>
+    <div id="tv-line" aria-hidden="true"></div>
+    <div id="cancel-text" class="text-layer"></div>
   </main>
 
-  <div id="dead-overlay" class="dead-overlay" aria-hidden="true"></div>
+  <div id="dead-overlay" aria-hidden="true"></div>
 
-  <section id="revisit" class="revisit" aria-label="revisit">
-    <div id="revisit-text" class="revisit-text"></div>
+  <section id="revisit" aria-label="재방문 공간">
+    <div id="revisit-text"></div>
   </section>
 
   <script>
-    const STORAGE_KEY = "a_world_completed_rebuild_v1";
+    /*
+      직접 그린 상자 파손 이미지를 같은 폴더에 넣을 때 사용하는 파일명입니다.
+      없는 파일은 자동으로 건너뛰며, 이미지가 하나도 없어도 CSS 상자로 정상 재생됩니다.
+
+      world-box-00.png : 평상시
+      world-box-01.png : 미세 균열
+      world-box-02.png : 1단계 파손
+      world-box-03.png : 2단계 파손
+      world-box-04.png : 임계 직전
+      world-box-05.png : 폭발 직전
+    */
+    const BOX_FRAME_FILES = [
+      "./world-box-00.png",
+      "./world-box-01.png",
+      "./world-box-02.png",
+      "./world-box-03.png",
+      "./world-box-04.png",
+      "./world-box-05.png"
+    ];
+
+    const STORAGE_KEY = "a_world_completed_v8";
     const HOLD_REQUIRED_MS = 3500;
-    const STEP_BACK_DELAY_MS = 11000;
-    const NEXT_PAGE_DELAY_MS = 620;
-    const FINAL_LINE = "방금 네가 무슨 짓을 했는지 알아?";
+    const PAGE_GAP_MS = 2000;
+    const FINAL_BLACK_GAP_MS = 5000;
+    const WHISPER_AUDIO_SRC = "./do-you-know-what-you-have-done.mp3";
 
-    const TYPEWRITER_TIMING = {
-      startDelay: 260,
-      baseTypingDelay: 132,
-      randomTypingDelay: 36,
-      spacePause: 36,
-      punctuationPause: 360,
-      lineBreakPause: 260,
-      rhythmPauseEvery: 7,
-      rhythmPauseDuration: 52
-    };
-
-    const FINAL_TYPEWRITER_TIMING = {
-      startDelay: 360,
-      baseTypingDelay: 255,
-      randomTypingDelay: 80,
-      spacePause: 95,
-      punctuationPause: 520
+    const SPEED = {
+      normal: 86,
+      normalRandom: 62,
+      slow: 176,
+      slowRandom: 74,
+      question: 126,
+      questionRandom: 66,
+      final: 310,
+      finalRandom: 90,
+      punctuation: 280,
+      lineBreak: 210,
+      space: 18
     };
 
     const $ = (selector) => document.querySelector(selector);
     const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+    const random = (min, max) => Math.random() * (max - min) + min;
 
     const narration = $("#narration");
-    const touchHint = $("#touch-hint");
+    const guideHint = $("#guide-hint");
+    const choicePanel = $("#choice-panel");
     const boxStage = $("#box-stage");
     const seedBox = $("#seed-box");
-    const stepBack = $("#step-back");
+    const boxFrameImage = $("#box-frame-image");
     const particleLayer = $("#particle-layer");
     const whiteout = $("#whiteout");
     const createdScene = $("#created-scene");
     const createdText = $("#created-text");
-    const logs = $("#logs");
-    const systemLine = $("#system-line");
-    const worldCube = $("#world-cube");
+    const timelineWindow = $("#timeline-window");
+    const timelineFeed = $("#timeline-feed");
     const glitchOverlay = $("#glitch-overlay");
-    const hardCut = $("#hard-cut");
+    const hardBlack = $("#hard-black");
     const finalText = $("#final-text");
     const tvLine = $("#tv-line");
+    const cancelText = $("#cancel-text");
     const deadOverlay = $("#dead-overlay");
     const revisit = $("#revisit");
     const revisitText = $("#revisit-text");
-    const cancelText = $("#cancel-text");
 
+    const availableBoxFrames = new Map();
+
+    let audioContext = null;
+    let holdOscillator = null;
+    let holdGain = null;
     let holdStart = 0;
     let holdRaf = 0;
     let holding = false;
     let completed = false;
-    let stepBackTimer = 0;
-    let waitingForTap = false;
-    let firstTouchHintUsed = false;
-
-    let audioContext = null;
-    let audioUnlocked = false;
-    let holdOscillator = null;
-    let holdGain = null;
-    let ambientOscillator = null;
-    let ambientGain = null;
+    let firstGuideUsed = false;
+    let longGuideUsed = false;
 
     if (new URLSearchParams(location.search).get("reset") === "1") {
       localStorage.removeItem(STORAGE_KEY);
       history.replaceState(null, "", location.pathname);
     }
 
-    function randomBetween(min, max) {
-      return min + Math.random() * (max - min);
+    function setScreenShake(x, y) {
+      document.documentElement.style.setProperty("--screen-x", `${x}px`);
+      document.documentElement.style.setProperty("--screen-y", `${y}px`);
     }
 
-    function setShake(x, y) {
-      document.documentElement.style.setProperty("--shake-x", `${x}px`);
-      document.documentElement.style.setProperty("--shake-y", `${y}px`);
+    function setBoxShake(x, y) {
+      document.documentElement.style.setProperty("--box-x", `${x}px`);
+      document.documentElement.style.setProperty("--box-y", `${y}px`);
     }
 
     function clearShake() {
-      setShake(0, 0);
+      setScreenShake(0, 0);
+      setBoxShake(0, 0);
     }
 
-    function setHoldProgress(value) {
-      const clamped = Math.max(0, Math.min(1, value));
-      document.documentElement.style.setProperty("--hold-progress", clamped.toFixed(3));
+    function setHoldProgress(progress) {
+      const value = Math.max(0, Math.min(1, progress));
+      document.documentElement.style.setProperty("--hold-progress", value.toFixed(3));
+      updateBoxFrame(value);
+    }
+
+    function loadBoxFrames() {
+      BOX_FRAME_FILES.forEach((src, index) => {
+        const image = new Image();
+
+        image.onload = () => {
+          availableBoxFrames.set(index, src);
+
+          if (index === 0 && !boxFrameImage.classList.contains("loaded")) {
+            setBoxFrame(0);
+          }
+        };
+
+        image.onerror = () => {
+          availableBoxFrames.delete(index);
+        };
+
+        image.src = src;
+      });
+    }
+
+    function nearestAvailableFrame(wantedIndex) {
+      for (let index = wantedIndex; index >= 0; index -= 1) {
+        if (availableBoxFrames.has(index)) {
+          return index;
+        }
+      }
+
+      return null;
+    }
+
+    function setBoxFrame(index) {
+      const availableIndex = nearestAvailableFrame(index);
+
+      if (availableIndex === null) {
+        boxFrameImage.classList.remove("loaded");
+        boxFrameImage.removeAttribute("src");
+        return;
+      }
+
+      const src = availableBoxFrames.get(availableIndex);
+
+      if (boxFrameImage.getAttribute("src") !== src) {
+        boxFrameImage.src = src;
+      }
+
+      boxFrameImage.classList.add("loaded");
+    }
+
+    function updateBoxFrame(progress) {
+      const index = Math.min(
+        BOX_FRAME_FILES.length - 1,
+        Math.floor(progress * BOX_FRAME_FILES.length)
+      );
+
+      setBoxFrame(index);
     }
 
     function initAudio() {
       if (audioContext) {
+        audioContext.resume?.();
         return;
       }
 
@@ -1188,67 +1251,35 @@
       }
 
       audioContext = new AudioContext();
-
-      ambientOscillator = audioContext.createOscillator();
-      ambientGain = audioContext.createGain();
-
-      ambientOscillator.type = "sine";
-      ambientOscillator.frequency.value = 38;
-      ambientGain.gain.value = 0.0001;
-
-      ambientOscillator.connect(ambientGain);
-      ambientGain.connect(audioContext.destination);
-      ambientOscillator.start();
     }
 
-    function unlockAudio() {
+    function playTapSound() {
       initAudio();
 
       if (!audioContext) {
         return;
       }
 
-      audioContext.resume?.();
-      audioUnlocked = true;
-
-      if (ambientGain) {
-        ambientGain.gain.cancelScheduledValues(audioContext.currentTime);
-        ambientGain.gain.setValueAtTime(.0001, audioContext.currentTime);
-        ambientGain.gain.linearRampToValueAtTime(.026, audioContext.currentTime + 2.2);
-      }
-    }
-
-    function playTapSound() {
-      if (!audioContext || !audioUnlocked) {
-        return;
-      }
-
-      const osc = audioContext.createOscillator();
+      const oscillator = audioContext.createOscillator();
       const gain = audioContext.createGain();
+      const now = audioContext.currentTime;
 
-      osc.type = "triangle";
-      osc.frequency.value = 160;
-      gain.gain.value = .0001;
+      oscillator.type = "triangle";
+      oscillator.frequency.setValueAtTime(160, now);
+      oscillator.frequency.exponentialRampToValueAtTime(76, now + .09);
 
-      osc.connect(gain);
+      gain.gain.setValueAtTime(.0001, now);
+      gain.gain.linearRampToValueAtTime(.034, now + .008);
+      gain.gain.exponentialRampToValueAtTime(.0001, now + .13);
+
+      oscillator.connect(gain);
       gain.connect(audioContext.destination);
-      osc.start();
-
-      osc.frequency.exponentialRampToValueAtTime(74, audioContext.currentTime + .08);
-      gain.gain.linearRampToValueAtTime(.035, audioContext.currentTime + .008);
-      gain.gain.exponentialRampToValueAtTime(.0001, audioContext.currentTime + .12);
-
-      window.setTimeout(() => {
-        try {
-          osc.stop();
-          osc.disconnect();
-          gain.disconnect();
-        } catch (error) {}
-      }, 150);
+      oscillator.start(now);
+      oscillator.stop(now + .15);
     }
 
     function startHoldSound() {
-      unlockAudio();
+      initAudio();
 
       if (!audioContext || holdOscillator) {
         return;
@@ -1258,14 +1289,13 @@
       holdGain = audioContext.createGain();
 
       holdOscillator.type = "sawtooth";
-      holdOscillator.frequency.value = 64;
+      holdOscillator.frequency.value = 58;
       holdGain.gain.value = .0001;
 
       holdOscillator.connect(holdGain);
       holdGain.connect(audioContext.destination);
-
       holdOscillator.start();
-      holdGain.gain.linearRampToValueAtTime(.075, audioContext.currentTime + .5);
+      holdGain.gain.linearRampToValueAtTime(.07, audioContext.currentTime + .45);
     }
 
     function updateHoldSound(progress) {
@@ -1273,8 +1303,17 @@
         return;
       }
 
-      holdOscillator.frequency.setTargetAtTime(64 + progress * 110, audioContext.currentTime, .05);
-      holdGain.gain.setTargetAtTime(.06 + progress * .14, audioContext.currentTime, .05);
+      holdOscillator.frequency.setTargetAtTime(
+        58 + progress * 138,
+        audioContext.currentTime,
+        .04
+      );
+
+      holdGain.gain.setTargetAtTime(
+        .055 + progress * .15,
+        audioContext.currentTime,
+        .04
+      );
     }
 
     function stopHoldSound() {
@@ -1284,9 +1323,10 @@
 
       const oscillator = holdOscillator;
       const gain = holdGain;
+      const now = audioContext.currentTime;
 
-      gain.gain.cancelScheduledValues(audioContext.currentTime);
-      gain.gain.setTargetAtTime(.0001, audioContext.currentTime, .04);
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setTargetAtTime(.0001, now, .035);
 
       window.setTimeout(() => {
         try {
@@ -1300,313 +1340,441 @@
       holdGain = null;
     }
 
-    function playBurstTone() {
-      unlockAudio();
+    function playBurstSound() {
+      initAudio();
 
       if (!audioContext) {
         return;
       }
 
-      const osc = audioContext.createOscillator();
+      const oscillator = audioContext.createOscillator();
       const gain = audioContext.createGain();
+      const now = audioContext.currentTime;
 
-      osc.type = "square";
-      osc.frequency.value = 180;
-      gain.gain.value = .0001;
+      oscillator.type = "square";
+      oscillator.frequency.setValueAtTime(170, now);
+      oscillator.frequency.exponentialRampToValueAtTime(940, now + .11);
+      oscillator.frequency.exponentialRampToValueAtTime(54, now + .48);
 
-      osc.connect(gain);
+      gain.gain.setValueAtTime(.0001, now);
+      gain.gain.linearRampToValueAtTime(.23, now + .035);
+      gain.gain.exponentialRampToValueAtTime(.0001, now + .55);
+
+      oscillator.connect(gain);
       gain.connect(audioContext.destination);
-      osc.start();
-
-      osc.frequency.exponentialRampToValueAtTime(840, audioContext.currentTime + .12);
-      osc.frequency.exponentialRampToValueAtTime(72, audioContext.currentTime + .42);
-
-      gain.gain.linearRampToValueAtTime(.24, audioContext.currentTime + .04);
-      gain.gain.exponentialRampToValueAtTime(.0001, audioContext.currentTime + .52);
-
-      window.setTimeout(() => {
-        try {
-          osc.stop();
-          osc.disconnect();
-          gain.disconnect();
-        } catch (error) {}
-      }, 620);
+      oscillator.start(now);
+      oscillator.stop(now + .58);
     }
 
-    function playErrorRumble() {
-      if (!audioContext || !audioUnlocked) {
+    function playErrorSound() {
+      initAudio();
+
+      if (!audioContext) {
         return;
       }
 
-      const osc = audioContext.createOscillator();
+      const oscillator = audioContext.createOscillator();
       const gain = audioContext.createGain();
+      const now = audioContext.currentTime;
 
-      osc.type = "sawtooth";
-      osc.frequency.value = 52;
-      gain.gain.value = .0001;
+      oscillator.type = "sawtooth";
+      oscillator.frequency.setValueAtTime(52, now);
+      oscillator.frequency.linearRampToValueAtTime(31, now + 1.1);
 
-      osc.connect(gain);
+      gain.gain.setValueAtTime(.0001, now);
+      gain.gain.linearRampToValueAtTime(.1, now + .04);
+      gain.gain.setTargetAtTime(.03, now + .8, .04);
+      gain.gain.exponentialRampToValueAtTime(.0001, now + 1.25);
+
+      oscillator.connect(gain);
       gain.connect(audioContext.destination);
-      osc.start();
-
-      gain.gain.linearRampToValueAtTime(.09, audioContext.currentTime + .05);
-      gain.gain.setTargetAtTime(.025, audioContext.currentTime + .75, .04);
-      gain.gain.exponentialRampToValueAtTime(.0001, audioContext.currentTime + 1.28);
-
-      window.setTimeout(() => {
-        try {
-          osc.stop();
-          osc.disconnect();
-          gain.disconnect();
-        } catch (error) {}
-      }, 1350);
+      oscillator.start(now);
+      oscillator.stop(now + 1.3);
     }
 
     function playHardCutSound() {
-      if (!audioContext || !audioUnlocked) {
+      initAudio();
+
+      if (!audioContext) {
         return;
       }
 
-      const osc = audioContext.createOscillator();
+      const oscillator = audioContext.createOscillator();
       const gain = audioContext.createGain();
+      const now = audioContext.currentTime;
 
-      osc.type = "square";
-      osc.frequency.value = 44;
-      gain.gain.value = .0001;
+      oscillator.type = "square";
+      oscillator.frequency.setValueAtTime(42, now);
 
-      osc.connect(gain);
+      gain.gain.setValueAtTime(.0001, now);
+      gain.gain.linearRampToValueAtTime(.25, now + .006);
+      gain.gain.exponentialRampToValueAtTime(.0001, now + .07);
+
+      oscillator.connect(gain);
       gain.connect(audioContext.destination);
-      osc.start();
-
-      gain.gain.linearRampToValueAtTime(.25, audioContext.currentTime + .008);
-      gain.gain.exponentialRampToValueAtTime(.0001, audioContext.currentTime + .075);
-
-      window.setTimeout(() => {
-        try {
-          osc.stop();
-          osc.disconnect();
-          gain.disconnect();
-        } catch (error) {}
-      }, 120);
+      oscillator.start(now);
+      oscillator.stop(now + .1);
     }
 
     function playWhisperVoice() {
-      if (!("speechSynthesis" in window)) {
-        return;
+      const audio = new Audio(WHISPER_AUDIO_SRC);
+      audio.volume = .82;
+      audio.play().catch(() => {});
+    }
+
+    function configureTremble(span) {
+      span.style.setProperty("--x1", `${random(-.9, .9).toFixed(2)}px`);
+      span.style.setProperty("--y1", `${random(-.9, .9).toFixed(2)}px`);
+      span.style.setProperty("--x2", `${random(-.9, .9).toFixed(2)}px`);
+      span.style.setProperty("--y2", `${random(-.9, .9).toFixed(2)}px`);
+      span.style.setProperty("--x3", `${random(-.9, .9).toFixed(2)}px`);
+      span.style.setProperty("--y3", `${random(-.9, .9).toFixed(2)}px`);
+      span.style.setProperty("--r1", `${random(-.6, .6).toFixed(2)}deg`);
+      span.style.setProperty("--r2", `${random(-.6, .6).toFixed(2)}deg`);
+      span.style.setProperty("--r3", `${random(-.6, .6).toFixed(2)}deg`);
+      span.style.setProperty("--duration", `${random(.42, 1.05).toFixed(2)}s`);
+      span.style.setProperty("--delay", `${random(-.9, 0).toFixed(2)}s`);
+    }
+
+    function createCharacter(character, options = {}) {
+      const span = document.createElement("span");
+
+      span.className = options.plainFinal
+        ? "final-char"
+        : "typed-char";
+
+      span.textContent = character;
+
+      if (!options.plainFinal) {
+        configureTremble(span);
       }
 
-      const utterance = new SpeechSynthesisUtterance("Do you know what you've done?");
-      utterance.lang = "en-US";
-      utterance.rate = .68;
-      utterance.pitch = .35;
-      utterance.volume = .92;
-
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
-    }
-
-    function createTypedCharacter(character) {
-      const span = document.createElement("span");
-
-      span.className = "typed-char";
-      span.textContent = character === " " ? "\u00A0" : character;
-
       return span;
     }
 
-    function createFinalCharacter(character) {
-      const span = document.createElement("span");
+    function getDelay(character, options = {}) {
+      let delay = options.delay ?? SPEED.normal;
 
-      const x1 = randomBetween(-2.6, 2.6);
-      const y1 = randomBetween(-2.2, 2.2);
-      const x2 = randomBetween(-2.8, 2.8);
-      const y2 = randomBetween(-2.4, 2.4);
-      const x3 = randomBetween(-2.4, 2.4);
-      const y3 = randomBetween(-2.2, 2.2);
-
-      span.className = "final-char";
-      span.textContent = character === " " ? "\u00A0" : character;
-
-      span.style.setProperty("--fx1", `${x1.toFixed(2)}px`);
-      span.style.setProperty("--fy1", `${y1.toFixed(2)}px`);
-      span.style.setProperty("--fx2", `${x2.toFixed(2)}px`);
-      span.style.setProperty("--fy2", `${y2.toFixed(2)}px`);
-      span.style.setProperty("--fx3", `${x3.toFixed(2)}px`);
-      span.style.setProperty("--fy3", `${y3.toFixed(2)}px`);
-      span.style.setProperty("--fd", `${randomBetween(1.5, 3.7).toFixed(2)}s`);
-      span.style.setProperty("--delay", `${randomBetween(0, .8).toFixed(2)}s`);
-
-      return span;
-    }
-
-    function triggerTypeTick(element) {
-      element.classList.remove("type-tick");
-
-      void element.offsetWidth;
-
-      element.classList.add("type-tick");
-    }
-
-    function getTypewriterDelay(character, index, timing) {
-      let delay = timing.baseTypingDelay;
-
-      delay += Math.floor(randomBetween(0, timing.randomTypingDelay));
+      delay += random(0, options.randomDelay ?? SPEED.normalRandom);
 
       if (character === " ") {
-        delay += timing.spacePause ?? 0;
-      }
-
-      if (character === "\n") {
-        delay += timing.lineBreakPause ?? 0;
+        delay += options.spacePause ?? SPEED.space;
       }
 
       if (/[.!?,]/.test(character)) {
-        delay += timing.punctuationPause ?? 0;
-      }
-
-      if (
-        timing.rhythmPauseEvery &&
-        index > 0 &&
-        index % timing.rhythmPauseEvery === 0
-      ) {
-        delay += timing.rhythmPauseDuration;
+        delay += options.punctuationPause ?? SPEED.punctuation;
       }
 
       return delay;
     }
 
-    function typeText(element, text, options = {}) {
-      return new Promise((resolve) => {
-        const characters = Array.from(text);
-        const timing = options.final ? FINAL_TYPEWRITER_TIMING : TYPEWRITER_TIMING;
+    async function typeChunk(target, text, options = {}) {
+      const units = text.split(/(\n| +)/g).filter((unit) => unit !== "");
 
-        element._typeToken = (element._typeToken || 0) + 1;
-
-        const token = element._typeToken;
-
-        if (options.clear !== false) {
-          element.textContent = "";
+      for (const unit of units) {
+        if (unit === "\n") {
+          target.appendChild(document.createElement("br"));
+          await sleep(options.lineBreakPause ?? SPEED.lineBreak);
+          continue;
         }
 
-        let index = 0;
-
-        function typeNextCharacter() {
-          if (element._typeToken !== token) {
-            resolve();
-            return;
+        if (/^ +$/.test(unit)) {
+          for (const space of unit) {
+            target.appendChild(document.createTextNode("\u00A0"));
+            await sleep(getDelay(space, options));
           }
-
-          if (index >= characters.length) {
-            element.classList.remove("type-tick");
-            resolve();
-            return;
-          }
-
-          const character = characters[index];
-
-          if (character === "\n") {
-            element.appendChild(document.createElement("br"));
-          } else {
-            element.appendChild(
-              options.final
-                ? createFinalCharacter(character)
-                : createTypedCharacter(character)
-            );
-          }
-
-          if (!options.final) {
-            triggerTypeTick(element);
-          }
-
-          index += 1;
-
-          window.setTimeout(
-            typeNextCharacter,
-            getTypewriterDelay(character, index, timing)
-          );
+          continue;
         }
 
-        window.setTimeout(
-          typeNextCharacter,
-          options.startDelay ?? timing.startDelay
-        );
-      });
+        const word = document.createElement("span");
+        word.className = "typed-word";
+        target.appendChild(word);
+
+        for (const character of Array.from(unit)) {
+          word.appendChild(createCharacter(character, options));
+          await sleep(getDelay(character, options));
+        }
+      }
     }
 
-    function waitForScreenTap(options = {}) {
-      waitingForTap = true;
+    async function typeSegments(target, segments, options = {}) {
+      target.textContent = "";
 
-      if (options.showHint) {
-        touchHint.classList.add("visible");
-        firstTouchHintUsed = true;
+      for (const segment of segments) {
+        if (segment.pauseBefore) {
+          await sleep(segment.pauseBefore);
+        }
+
+        await typeChunk(target, segment.text, {
+          ...options,
+          ...segment
+        });
+
+        if (segment.pauseAfter) {
+          await sleep(segment.pauseAfter);
+        }
+      }
+    }
+
+    function staticTrembleText(element, text) {
+      element.textContent = "";
+
+      const tokens = text.split(/( +)/g).filter(Boolean);
+
+      for (const token of tokens) {
+        if (/^ +$/.test(token)) {
+          element.appendChild(document.createTextNode("\u00A0".repeat(token.length)));
+          continue;
+        }
+
+        const word = document.createElement("span");
+        word.className = "typed-word";
+
+        for (const character of Array.from(token)) {
+          const span = createCharacter(character);
+          span.style.opacity = "1";
+          word.appendChild(span);
+        }
+
+        element.appendChild(word);
+      }
+    }
+
+    function prepareTextLayer(element) {
+      element.classList.remove("fade-out", "rise-away");
+      element.style.transition = "none";
+      element.style.opacity = "1";
+      element.style.filter = "blur(0)";
+
+      void element.offsetWidth;
+
+      element.style.removeProperty("transition");
+    }
+
+    async function fadeOutText(element, options = {}) {
+      element.classList.add(options.rise ? "rise-away" : "fade-out");
+      await sleep(options.duration ?? (options.rise ? 1260 : 700));
+      element.textContent = "";
+      element.classList.remove("fade-out", "rise-away");
+    }
+
+    function showGuide(text) {
+      guideHint.textContent = text;
+      guideHint.classList.remove("hiding", "visible");
+      void guideHint.offsetWidth;
+      guideHint.classList.add("visible");
+    }
+
+    async function hideGuide() {
+      guideHint.classList.add("hiding");
+      await sleep(820);
+      guideHint.classList.remove("visible", "hiding");
+      guideHint.textContent = "";
+    }
+
+    function waitForTap(options = {}) {
+      if (options.guide && !firstGuideUsed) {
+        firstGuideUsed = true;
+        showGuide(options.guide);
       }
 
       return new Promise((resolve) => {
-        function done(event) {
-          if (event) {
-            event.preventDefault();
-          }
+        function finish(event) {
+          event?.preventDefault();
 
-          waitingForTap = false;
-          touchHint.classList.remove("visible");
-
-          window.removeEventListener("pointerup", done, true);
+          window.removeEventListener("pointerup", finish, true);
           window.removeEventListener("keydown", onKey, true);
 
-          unlockAudio();
           playTapSound();
 
-          window.setTimeout(resolve, NEXT_PAGE_DELAY_MS);
+          const guidePromise = guideHint.classList.contains("visible")
+            ? hideGuide()
+            : Promise.resolve();
+
+          guidePromise.then(resolve);
         }
 
         function onKey(event) {
           if (event.key === "Enter" || event.key === " ") {
-            done(event);
+            finish(event);
           }
         }
 
-        window.addEventListener("pointerup", done, true);
+        window.addEventListener("pointerup", finish, true);
         window.addEventListener("keydown", onKey, true);
       });
     }
 
-    async function showNarrationPage(text, options = {}) {
-      narration._typeToken = (narration._typeToken || 0) + 1;
-      narration.textContent = "";
-      narration.classList.remove("clearing");
+    async function showNarrationPage(segments, options = {}) {
+      prepareTextLayer(narration);
 
-      await sleep(30);
+      options.onStart?.();
 
-      narration.classList.add("visible");
+      await typeSegments(narration, segments, options.typing);
 
-      await typeText(narration, text);
+      if (options.advance === "auto") {
+        await sleep(options.autoWait ?? 2000);
+      } else {
+        await waitForTap({ guide: options.guide });
+      }
 
-      await waitForScreenTap({
-        showHint: Boolean(options.showHint) && !firstTouchHintUsed
+      await fadeOutText(narration, {
+        duration: options.fadeDuration ?? 700
       });
 
-      narration.classList.add("clearing");
-
-      await sleep(210);
-
-      narration.classList.remove("visible", "clearing", "type-tick");
-      narration.textContent = "";
+      await sleep(options.gap ?? PAGE_GAP_MS);
     }
 
-    async function showCreatedPage(text) {
-      createdText._typeToken = (createdText._typeToken || 0) + 1;
-      createdText.textContent = "";
-      createdText.classList.add("visible");
+    function clearChoices() {
+      choicePanel.classList.remove("visible");
+      choicePanel.innerHTML = "";
+    }
 
-      await typeText(createdText, text);
+    function askChoice(labels) {
+      clearChoices();
 
-      await waitForScreenTap();
+      return new Promise((resolve) => {
+        labels.forEach((label, index) => {
+          const button = document.createElement("button");
 
-      createdText.classList.remove("visible", "type-tick");
+          button.className = "choice-button";
+          button.type = "button";
+          staticTrembleText(button, label);
 
-      await sleep(210);
+          button.addEventListener("click", () => {
+            playTapSound();
+            clearChoices();
+            resolve(index);
+          }, { once: true });
 
-      createdText.textContent = "";
+          choicePanel.appendChild(button);
+        });
+
+        void choicePanel.offsetWidth;
+        choicePanel.classList.add("visible");
+      });
+    }
+
+    async function showQuestion(segments, labels, options = {}) {
+      prepareTextLayer(narration);
+      await typeSegments(narration, segments, options.typing);
+
+      const result = await askChoice(labels);
+
+      await fadeOutText(narration, { duration: 420 });
+      await sleep(options.gap ?? 650);
+
+      return result;
+    }
+
+    function revealForeshadowBox() {
+      boxStage.hidden = false;
+      seedBox.disabled = true;
+      boxStage.classList.add("foreshadow");
+    }
+
+    async function activateBox() {
+      boxStage.hidden = false;
+      boxStage.classList.remove("foreshadow");
+      boxStage.classList.add("ready");
+      seedBox.disabled = false;
+
+      await sleep(1450);
+
+      if (!longGuideUsed) {
+        longGuideUsed = true;
+        showGuide("길게");
+
+        const dismiss = () => {
+          window.removeEventListener("pointerdown", dismiss, true);
+          hideGuide();
+        };
+
+        window.addEventListener("pointerdown", dismiss, true);
+      }
+    }
+
+    async function successfulChoiceFlow() {
+      prepareTextLayer(narration);
+
+      await typeSegments(narration, [
+        {
+          text: "훌륭합니다.",
+          delay: SPEED.question,
+          randomDelay: SPEED.questionRandom
+        }
+      ]);
+
+      await sleep(3000);
+      await fadeOutText(narration, { duration: 680 });
+      await sleep(900);
+
+      prepareTextLayer(narration);
+
+      await typeSegments(narration, [
+        {
+          text: "당신은 언제든.",
+          delay: SPEED.normal,
+          randomDelay: SPEED.normalRandom,
+          pauseAfter: 1000
+        },
+        {
+          text: "\n상자에 손을 올릴 수 있습니다.",
+          delay: SPEED.normal,
+          randomDelay: SPEED.normalRandom
+        }
+      ]);
+
+      await sleep(900);
+
+      const boxPromise = activateBox();
+      const textPromise = fadeOutText(narration, {
+        rise: true,
+        duration: 1260
+      });
+
+      await Promise.all([boxPromise, textPromise]);
+    }
+
+    async function influenceQuestionFlow() {
+      const firstChoice = await showQuestion(
+        [
+          {
+            text: "당신의 영향력이 궁금하지 않으십니까?",
+            delay: SPEED.question,
+            randomDelay: SPEED.questionRandom,
+            punctuationPause: 420
+          }
+        ],
+        ["고개를 끄덕인다", "고개를 젓는다"]
+      );
+
+      if (firstChoice === 0) {
+        await successfulChoiceFlow();
+        return;
+      }
+
+      const quitChoice = await showQuestion(
+        [
+          {
+            text: "관두시겠습니까?",
+            delay: SPEED.question,
+            randomDelay: SPEED.questionRandom
+          }
+        ],
+        ["관둔다", "다시 돌아간다"]
+      );
+
+      if (quitChoice === 0) {
+        await runCancelRoute();
+        return;
+      }
+
+      const makeChoice = await askChoice(["세계를 만든다."]);
+
+      if (makeChoice === 0) {
+        await successfulChoiceFlow();
+      }
     }
 
     async function startIntro() {
@@ -1615,56 +1783,138 @@
         return;
       }
 
-      document.body.classList.add("dead");
-
       await sleep(800);
 
-      document.body.classList.remove("dead");
+      /* 1. 점 세 개는 터치 없이 자동 진행 */
+      prepareTextLayer(narration);
 
-      await showNarrationPage("...이제는 모두가 자신만의 세계 하나쯤은 가지고 있습니다.", {
-        showHint: true
-      });
+      await typeSegments(narration, [
+        { text: ".", delay: 620, randomDelay: 80, punctuationPause: 0 },
+        { text: ".", delay: 620, randomDelay: 80, punctuationPause: 0 },
+        { text: ".", delay: 620, randomDelay: 80, punctuationPause: 0 }
+      ]);
 
-      await showNarrationPage("당신도 마찬가지이죠.");
-      await showNarrationPage("앞에 작은 상자가 놓여있군요.");
-      await showNarrationPage("때때로 모든 것은 단 하나의 점, 선, 네모에서 시작되곤 합니다.");
-      await showNarrationPage("당신이 지닌 작고 소중한 영향력이,");
-      await showNarrationPage("더 큰 꿈과 희망으로 피어날 수 있음을 보여주기에 충분한 녀석이 될 겁니다.");
-      await showNarrationPage("당신은 언제든 상자에 손을 올릴 수 있습니다.");
+      await sleep(900);
+      await fadeOutText(narration, { duration: 900 });
+      await sleep(1500);
 
-      await showBox();
-    }
-
-    async function showBox() {
-      touchHint.classList.remove("visible");
-      boxStage.hidden = false;
-
-      await sleep(40);
-      boxStage.classList.add("visible");
-
-      stepBackTimer = window.setTimeout(() => {
-        if (!completed) {
-          stepBack.classList.add("visible");
+      /* 2. 이제는 부분만 느리고, 이후 정상 속도 */
+      await showNarrationPage(
+        [
+          {
+            text: "이제는",
+            delay: SPEED.slow,
+            randomDelay: SPEED.slowRandom,
+            pauseAfter: 260
+          },
+          {
+            text: " 모두가 자신만의 세계 하나쯤은\n가지고 있습니다.",
+            delay: SPEED.normal,
+            randomDelay: SPEED.normalRandom
+          }
+        ],
+        {
+          guide: "터치하여 넘기기",
+          gap: PAGE_GAP_MS
         }
-      }, STEP_BACK_DELAY_MS);
+      );
+
+      await showNarrationPage(
+        [
+          {
+            text: "당신도 마찬가지이죠.",
+            delay: SPEED.normal,
+            randomDelay: SPEED.normalRandom
+          }
+        ]
+      );
+
+      await showNarrationPage(
+        [
+          {
+            text: "앞에 작은 상자가 놓여있군요.",
+            delay: SPEED.normal,
+            randomDelay: SPEED.normalRandom
+          }
+        ],
+        {
+          onStart: revealForeshadowBox
+        }
+      );
+
+      await showNarrationPage(
+        [
+          {
+            text: "때때로 모든 것은...\n단 하나의 점,",
+            delay: SPEED.normal,
+            randomDelay: SPEED.normalRandom,
+            pauseAfter: 500
+          },
+          {
+            text: " 선,",
+            delay: SPEED.normal,
+            randomDelay: SPEED.normalRandom,
+            pauseAfter: 500
+          },
+          {
+            text: " 네모에서\n시작되곤 합니다.",
+            delay: SPEED.normal,
+            randomDelay: SPEED.normalRandom
+          }
+        ]
+      );
+
+      await showNarrationPage(
+        [
+          {
+            text: "당신이 지닌\n작고 소중한 영향력이,",
+            delay: SPEED.normal,
+            randomDelay: SPEED.normalRandom
+          }
+        ],
+        {
+          advance: "auto",
+          autoWait: 2000,
+          gap: 700
+        }
+      );
+
+      await showNarrationPage(
+        [
+          {
+            text: "더",
+            delay: SPEED.normal,
+            randomDelay: SPEED.normalRandom,
+            pauseAfter: 380
+          },
+          {
+            text: " 큰 꿈과 희망으로\n피어날 수 있음을 보여주기에\n충분한 녀석이 될 겁니다.",
+            delay: SPEED.normal,
+            randomDelay: SPEED.normalRandom
+          }
+        ],
+        {
+          gap: PAGE_GAP_MS
+        }
+      );
+
+      await influenceQuestionFlow();
     }
 
     function beginHold(event) {
-      if (completed || waitingForTap) {
+      if (completed || holding || seedBox.disabled) {
         return;
       }
 
       event.preventDefault();
-
       seedBox.setPointerCapture?.(event.pointerId);
 
+      initAudio();
       startHoldSound();
 
       holding = true;
       holdStart = performance.now();
-
       boxStage.classList.add("holding");
-      stepBack.classList.remove("visible");
 
       holdRaf = requestAnimationFrame(updateHold);
     }
@@ -1680,23 +1930,26 @@
       setHoldProgress(progress);
       updateHoldSound(progress);
 
-      const shakeAmount =
+      const amount =
         progress < .2
-          ? .5
+          ? .55
           : progress < .45
-            ? 1.3
+            ? 1.5
             : progress < .72
-              ? 2.8
-              : 5.3;
+              ? 3.2
+              : 6.2;
 
-      setShake(
-        randomBetween(-shakeAmount, shakeAmount),
-        randomBetween(-shakeAmount * .45, shakeAmount * .45)
+      setBoxShake(
+        random(-amount, amount),
+        random(-amount * .45, amount * .45)
       );
 
-      boxStage.classList.toggle("hold-mid", progress >= .22);
-      boxStage.classList.toggle("hold-high", progress >= .48);
-      boxStage.classList.toggle("hold-max", progress >= .72);
+      setScreenShake(
+        random(-amount * .36, amount * .36),
+        random(-amount * .1, amount * .1)
+      );
+
+      boxStage.classList.toggle("high", progress >= .48);
 
       if (progress >= 1) {
         completeHold();
@@ -1715,8 +1968,7 @@
       cancelAnimationFrame(holdRaf);
       stopHoldSound();
 
-      boxStage.classList.remove("holding", "hold-mid", "hold-high", "hold-max");
-
+      boxStage.classList.remove("holding", "high");
       setHoldProgress(0);
       clearShake();
     }
@@ -1728,202 +1980,306 @@
 
       completed = true;
       holding = false;
-
-      window.clearTimeout(stepBackTimer);
       cancelAnimationFrame(holdRaf);
       stopHoldSound();
-
-      setHoldProgress(1);
-      boxStage.classList.add("hold-mid", "hold-high", "hold-max");
-
       clearShake();
+      setHoldProgress(1);
 
+      /* 임계점에서 0.2초 정적 */
       await sleep(200);
       await explodeWorld();
     }
 
-    function createBurstParticles() {
+    function createExplosion() {
       particleLayer.innerHTML = "";
 
       const shockwave = document.createElement("div");
       shockwave.className = "shockwave";
-      particleLayer.append(shockwave);
+      particleLayer.appendChild(shockwave);
 
-      for (let i = 0; i < 32; i += 1) {
+      for (let index = 0; index < 36; index += 1) {
         const line = document.createElement("span");
 
         line.className = "burst-line";
-        line.style.setProperty("--angle", `${randomBetween(0, 360)}deg`);
-        line.style.setProperty("--distance", `${randomBetween(120, 620)}px`);
-        line.style.setProperty("--length", `${randomBetween(70, 220)}px`);
-        line.style.setProperty("--delay", `${randomBetween(0, .08)}s`);
+        line.style.setProperty("--angle", `${random(0, 360)}deg`);
+        line.style.setProperty("--distance", `${random(130, 650)}px`);
+        line.style.setProperty("--length", `${random(70, 230)}px`);
+        line.style.setProperty("--delay", `${random(0, .08)}s`);
 
-        particleLayer.append(line);
+        particleLayer.appendChild(line);
       }
 
-      for (let i = 0; i < 70; i += 1) {
+      for (let index = 0; index < 78; index += 1) {
         const piece = document.createElement("span");
 
         piece.className = "burst-piece";
-        piece.style.setProperty("--angle", `${randomBetween(0, 360)}deg`);
-        piece.style.setProperty("--distance", `${randomBetween(80, 480)}px`);
-        piece.style.setProperty("--size", `${randomBetween(2, 8)}px`);
-        piece.style.setProperty("--spin", `${randomBetween(-520, 520)}deg`);
-        piece.style.setProperty("--delay", `${randomBetween(0, .18)}s`);
+        piece.style.setProperty("--angle", `${random(0, 360)}deg`);
+        piece.style.setProperty("--distance", `${random(80, 510)}px`);
+        piece.style.setProperty("--size", `${random(2, 8)}px`);
+        piece.style.setProperty("--spin", `${random(-620, 620)}deg`);
+        piece.style.setProperty("--delay", `${random(0, .18)}s`);
 
-        particleLayer.append(piece);
+        particleLayer.appendChild(piece);
       }
     }
 
     async function explodeWorld() {
-      playBurstTone();
-      clearShake();
+      playBurstSound();
+      createExplosion();
 
-      boxStage.classList.remove("holding");
-
-      createBurstParticles();
-
-      await sleep(90);
-
+      await sleep(95);
       whiteout.classList.add("active");
 
       await sleep(180);
-
       boxStage.hidden = true;
-      boxStage.classList.remove("visible", "hold-mid", "hold-high", "hold-max");
+      boxStage.classList.remove("ready", "holding", "high");
 
       await sleep(900);
-
       await revealCreatedWorld();
+    }
+
+    async function showCreatedPage(segments, options = {}) {
+      prepareTextLayer(createdText);
+      await typeSegments(createdText, segments, options.typing);
+
+      if (options.advance === "auto") {
+        await sleep(options.autoWait ?? 2000);
+      } else {
+        await waitForTap();
+      }
+
+      await fadeOutText(createdText, {
+        duration: options.fadeDuration ?? 700
+      });
+
+      await sleep(options.gap ?? 1200);
     }
 
     async function revealCreatedWorld() {
       createdScene.hidden = false;
       createdScene.classList.add("visible");
-
-      whiteout.classList.add("fade-away");
+      whiteout.classList.add("release");
 
       await sleep(1150);
 
-      whiteout.classList.remove("active", "fade-away");
+      whiteout.classList.remove("active", "release");
       particleLayer.innerHTML = "";
 
-      await showCreatedPage("마침내... 손에 작은 세계를 쥐셨군요.");
-      await showCreatedPage("절대로, 절대로 놓지 마세요.");
-      await showCreatedPage("...시간이 흘러갑니다.");
+      await showCreatedPage([
+        {
+          text: "마침내...",
+          delay: SPEED.normal,
+          randomDelay: SPEED.normalRandom,
+          pauseAfter: 2000
+        },
+        {
+          text: "\n손에 작은 세계를 쥐셨군요.",
+          delay: SPEED.normal,
+          randomDelay: SPEED.normalRandom
+        }
+      ]);
+
+      await showCreatedPage([
+        {
+          text: "절대로,",
+          delay: SPEED.normal,
+          randomDelay: SPEED.normalRandom,
+          pauseAfter: 2000
+        },
+        {
+          text: " 절대로",
+          delay: SPEED.normal,
+          randomDelay: SPEED.normalRandom,
+          pauseAfter: 500
+        },
+        {
+          text: " 놓지 마세요.",
+          delay: SPEED.normal,
+          randomDelay: SPEED.normalRandom
+        }
+      ]);
+
+      await showCreatedPage(
+        [
+          {
+            text: "그것은 당신의 작품입니다.",
+            delay: SPEED.normal,
+            randomDelay: SPEED.normalRandom
+          }
+        ],
+        {
+          advance: "auto",
+          autoWait: 5000,
+          gap: 900
+        }
+      );
 
       await runTimeFlow();
     }
 
-    async function runTimeFlow() {
-      createdText.classList.remove("visible");
-      logs.classList.add("visible");
-      logs.innerHTML = "";
+    function appendDayLine(text, corrupt = false) {
+      const line = document.createElement("div");
 
-      const dayLogs = [
-        "DAY 000",
-        "DAY 001",
-        "DAY 007",
-        "DAY 030",
-        "DAY 422"
-      ];
+      line.className = `day-line${corrupt ? " corrupt" : ""}`;
+      line.textContent = text;
+      timelineFeed.appendChild(line);
 
-      for (const line of dayLogs) {
-        const element = document.createElement("div");
-        element.className = "log-line";
-        element.textContent = line;
-        logs.append(element);
-        await sleep(360);
-      }
+      timelineFeed.scrollTo({
+        top: timelineFeed.scrollHeight,
+        behavior: "smooth"
+      });
 
-      await sleep(260);
-
-      await runDateError();
+      return line;
     }
 
-    async function runDateError() {
-      playErrorRumble();
+    async function runTimelineFeed() {
+      timelineFeed.innerHTML = "";
+      timelineWindow.classList.add("visible");
 
-      worldCube.classList.add("error-spin");
-      glitchOverlay.classList.add("active");
-
-      const errorLines = [
-        "DAY 5▒▒",
-        "DAY ▓▓1",
-        "DAY --",
-        "DAY ?",
-        "choice registered",
-        "interference confirmed"
+      const days = [
+        1, 2, 3, 4, 5, 6, 7,
+        14, 21, 49,
+        343, 2401, 16807, 117649, 823543, 5764801
       ];
 
-      systemLine.classList.add("visible");
+      for (let index = 0; index < days.length; index += 1) {
+        appendDayLine(`DAY ${days[index]}`);
 
-      for (let i = 0; i < 14; i += 1) {
-        setShake(randomBetween(-7, 7), randomBetween(-2, 2));
+        const delay = Math.max(78, 430 - index * 25);
+        await sleep(delay);
+      }
 
-        logs.innerHTML = "";
+      await sleep(420);
+      await runTimelineError();
+    }
 
-        const amount = 3 + Math.floor(Math.random() * 4);
+    async function runTimeFlow() {
+      prepareTextLayer(createdText);
 
-        for (let j = 0; j < amount; j += 1) {
-          const element = document.createElement("div");
+      const typingPromise = typeSegments(createdText, [
+        {
+          text: "시간이 흐르기 시작합니다.",
+          delay: SPEED.slow,
+          randomDelay: SPEED.slowRandom,
+          punctuationPause: 420
+        }
+      ]);
 
-          element.className = "log-line error";
-          element.textContent =
-            errorLines[Math.floor(Math.random() * errorLines.length)];
+      await sleep(620);
+      const timelinePromise = runTimelineFeed();
 
-          logs.append(element);
+      await Promise.all([typingPromise, timelinePromise]);
+    }
+
+    async function runTimelineError() {
+      playErrorSound();
+      glitchOverlay.classList.add("active");
+
+      const fragments = [
+        "DAY ▓▓▓▓▓",
+        "DAY 7^?",
+        "DAY -1",
+        "DAY NaN",
+        "observer detected",
+        "choice registered",
+        "interference confirmed",
+        "██████████"
+      ];
+
+      for (let index = 0; index < 18; index += 1) {
+        const amount = 1 + Math.floor(random(1, 4));
+
+        for (let count = 0; count < amount; count += 1) {
+          appendDayLine(
+            fragments[Math.floor(Math.random() * fragments.length)],
+            true
+          );
         }
 
-        systemLine.textContent =
-          errorLines[Math.floor(Math.random() * errorLines.length)];
-
-        await sleep(92);
+        setScreenShake(random(-8, 8), random(-2.4, 2.4));
+        await sleep(Math.max(48, 110 - index * 3));
       }
 
       clearShake();
-
       await hardCutToFinal();
     }
 
     async function hardCutToFinal() {
       playHardCutSound();
 
-      hardCut.classList.add("active");
-
+      /* 페이드 없이 한 프레임에 검정으로 끊김 */
+      hardBlack.classList.add("active");
+      glitchOverlay.classList.remove("active");
       createdScene.hidden = true;
       createdScene.classList.remove("visible");
-      logs.classList.remove("visible");
-      logs.innerHTML = "";
-      systemLine.classList.remove("visible");
-      systemLine.textContent = "";
-      worldCube.classList.remove("error-spin");
-      glitchOverlay.classList.remove("active");
+      timelineWindow.classList.remove("visible");
+      timelineFeed.innerHTML = "";
+      createdText.textContent = "";
 
-      await sleep(260);
+      await sleep(FINAL_BLACK_GAP_MS);
 
-      hardCut.classList.remove("active");
-
-      finalText.textContent = "";
-      finalText.classList.add("visible");
-
+      /* 검정 위에서 최종 문장만 아주 느리게 타이핑 */
+      hardBlack.classList.remove("active");
+      prepareTextLayer(finalText);
       playWhisperVoice();
 
-      await typeText(finalText, FINAL_LINE, {
-        final: true
-      });
+      await typeSegments(
+        finalText,
+        [
+          {
+            text: "네가 무슨 짓을 했는지 알아?",
+            delay: SPEED.final,
+            randomDelay: SPEED.finalRandom,
+            punctuationPause: 600,
+            plainFinal: true
+          }
+        ],
+        {
+          plainFinal: true
+        }
+      );
 
-      await sleep(1750);
+      await sleep(2400);
+      tvLine.classList.add("active");
+      await sleep(620);
 
+      finalText.textContent = "";
+      localStorage.setItem(STORAGE_KEY, "1");
+      enterDeadState();
+    }
+
+    async function runCancelRoute() {
+      completed = true;
+      stopHoldSound();
+      clearChoices();
+      boxStage.hidden = true;
+      narration.textContent = "";
+
+      tvLine.classList.remove("active");
+      void tvLine.offsetWidth;
       tvLine.classList.add("active");
 
-      await sleep(250);
+      await sleep(700);
 
-      finalText.classList.remove("visible");
+      const phrases = [
+        "그것이 당신의 선택이라면, 잘 알겠습니다.",
+        "그 의사를 존중합니다."
+      ];
 
-      await sleep(650);
+      const phrase = phrases[Math.floor(Math.random() * phrases.length)];
 
-      localStorage.setItem(STORAGE_KEY, "1");
+      prepareTextLayer(cancelText);
+
+      await typeSegments(cancelText, [
+        {
+          text: `:(\n요청이 취소됨.\n${phrase}`,
+          delay: SPEED.normal,
+          randomDelay: SPEED.normalRandom
+        }
+      ]);
+
+      await sleep(3200);
+      await fadeOutText(cancelText, { duration: 700 });
       enterDeadState();
     }
 
@@ -1956,51 +2312,8 @@
         "당신은 이미 세계에 들어와있습니다."
       ];
 
-      revisitText.textContent =
-        phrases[Math.floor(Math.random() * phrases.length)];
-
+      revisitText.textContent = phrases[Math.floor(Math.random() * phrases.length)];
       revisit.classList.add("active");
-    }
-
-    async function runCancelRoute(event) {
-      event?.preventDefault();
-
-      if (completed) {
-        return;
-      }
-
-      completed = true;
-
-      window.clearTimeout(stepBackTimer);
-      cancelHold();
-
-      boxStage.classList.remove("visible");
-      tvLine.classList.add("active");
-
-      await sleep(720);
-
-      boxStage.hidden = true;
-
-      const phrases = [
-        "그것이 당신의 선택이라면, 잘 알겠습니다.",
-        "그 의사를 존중합니다."
-      ];
-
-      const phrase = phrases[Math.floor(Math.random() * phrases.length)];
-
-      cancelText.textContent = "";
-      cancelText.classList.add("visible");
-
-      await typeText(
-        cancelText,
-        `:( 요청이 취소됨. ${phrase}`
-      );
-
-      await waitForScreenTap();
-
-      cancelText.classList.remove("visible");
-      deadOverlay.classList.add("active");
-      document.body.classList.add("dead");
     }
 
     seedBox.addEventListener("pointerdown", beginHold);
@@ -2008,26 +2321,20 @@
     seedBox.addEventListener("pointercancel", cancelHold);
     seedBox.addEventListener("lostpointercapture", cancelHold);
 
-    stepBack.addEventListener("click", runCancelRoute);
+    window.addEventListener("pointerdown", initAudio, { once: true });
+    window.addEventListener("keydown", initAudio, { once: true });
 
     window.addEventListener("contextmenu", (event) => {
       event.preventDefault();
     });
 
-    window.addEventListener("pointerdown", () => {
-      unlockAudio();
-    }, { once: true });
-
-    window.addEventListener("keydown", () => {
-      unlockAudio();
-    }, { once: true });
-
     window.addEventListener("beforeunload", () => {
-      if (completed) {
+      if (completed && deadOverlay.classList.contains("active")) {
         localStorage.setItem(STORAGE_KEY, "1");
       }
     });
 
+    loadBoxFrames();
     startIntro();
   </script>
 </body>
