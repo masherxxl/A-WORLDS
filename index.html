@@ -1113,18 +1113,28 @@
     const FINAL_BLACK_GAP_MS = 4000;
     const WHISPER_AUDIO_SRC = "./do-you-know-what-you-have-done.mp3";
 
+    /*
+      타자 속도와 자동 유지 시간을 분리했습니다.
+      타자는 이전보다 약 25~30% 느리게, 자동 진행 대사의 완성 후 유지 시간은 짧게 유지합니다.
+    */
     const SPEED = {
-      normal: 86,
-      normalRandom: 62,
-      slow: 176,
-      slowRandom: 74,
-      question: 126,
-      questionRandom: 66,
-      final: 310,
-      finalRandom: 90,
-      punctuation: 280,
-      lineBreak: 210,
-      space: 18
+      normal: 116,
+      normalRandom: 72,
+      slow: 218,
+      slowRandom: 92,
+      question: 158,
+      questionRandom: 82,
+      final: 330,
+      finalRandom: 100,
+      punctuation: 330,
+      lineBreak: 250,
+      space: 28
+    };
+
+    const AUTO_HOLD = {
+      short: 1000,
+      medium: 2000,
+      long: 3000
     };
 
     const $ = (selector) => document.querySelector(selector);
@@ -1691,7 +1701,7 @@
       await typeSegments(narration, segments, options.typing);
 
       if (options.advance === "auto") {
-        await sleep(options.autoWait ?? 1000);
+        await sleep(options.autoWait ?? AUTO_HOLD.short);
       } else {
         await waitForTap({ guide: options.guide });
       }
@@ -1783,7 +1793,7 @@
         }
       ]);
 
-      await sleep(2000);
+      await sleep(AUTO_HOLD.medium);
       await fadeOutText(narration, { duration: 340 });
       await sleep(900);
 
@@ -1952,7 +1962,7 @@
         ],
         {
           advance: "auto",
-          autoWait: 1000,
+          autoWait: AUTO_HOLD.short,
           gap: 700
         }
       );
@@ -2121,7 +2131,7 @@
       await typeSegments(createdText, segments, options.typing);
 
       if (options.advance === "auto") {
-        await sleep(options.autoWait ?? 1000);
+        await sleep(options.autoWait ?? AUTO_HOLD.short);
       } else {
         await waitForTap();
       }
@@ -2188,7 +2198,7 @@
         ],
         {
           advance: "auto",
-          autoWait: 4000,
+          autoWait: AUTO_HOLD.long,
           gap: 900
         }
       );
@@ -2352,7 +2362,7 @@
         }
       ]);
 
-      await sleep(3200);
+      await sleep(AUTO_HOLD.long);
       await fadeOutText(cancelText, { duration: 350 });
       enterDeadState();
     }
