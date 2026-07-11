@@ -1541,21 +1541,42 @@
     }
 
     function prepareTextLayer(element) {
+      /*
+        중요:
+        이전 버전은 opacity와 filter를 인라인 스타일로 1 / blur(0)에 고정해서
+        .fade-out 클래스가 붙어도 CSS 페이드가 덮어쓰이지 않는 문제가 있었습니다.
+        이제 인라인 값을 완전히 지우고 기본 CSS 상태로 되돌립니다.
+      */
       element.classList.remove("fade-out", "rise-away");
-      element.style.transition = "none";
-      element.style.opacity = "1";
-      element.style.filter = "blur(0)";
-
-      void element.offsetWidth;
-
+      element.style.removeProperty("opacity");
+      element.style.removeProperty("filter");
+      element.style.removeProperty("transform");
       element.style.removeProperty("transition");
+
+      /* 이전 페이드 상태 제거를 브라우저가 한 프레임 확실히 인식하도록 강제 계산 */
+      void element.offsetWidth;
     }
 
     async function fadeOutText(element, options = {}) {
-      element.classList.add(options.rise ? "rise-away" : "fade-out");
-      await sleep(options.duration ?? (options.rise ? 1260 : 700));
+      const fadeClass = options.rise ? "rise-away" : "fade-out";
+      const duration = options.duration ?? (options.rise ? 1260 : 700);
+
+      /* 혹시 남아 있을 수 있는 인라인 값이 전환을 막지 않게 다시 한 번 정리 */
+      element.style.removeProperty("opacity");
+      element.style.removeProperty("filter");
+      element.style.removeProperty("transform");
+      element.style.removeProperty("transition");
+
+      /* 현재 보이는 상태를 먼저 확정한 다음 다음 프레임에 페이드 시작 */
+      void element.offsetWidth;
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      element.classList.add(fadeClass);
+      await sleep(duration);
+
       element.textContent = "";
       element.classList.remove("fade-out", "rise-away");
+      void element.offsetWidth;
     }
 
     function showGuide(text) {
@@ -2052,7 +2073,8 @@
         duration: options.fadeDuration ?? 700
       });
 
-      await sleep(options.gap ?? 1200);
+      /* 특수 지정이 없는 모든 생성 이후 대사도 다음 출력 전 2초 유지 */
+      await sleep(options.gap ?? PAGE_GAP_MS);
     }
 
     async function revealCreatedWorld() {
