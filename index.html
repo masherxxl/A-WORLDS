@@ -19,11 +19,11 @@
     :root {
       --bg: #000;
       --fg: #fff;
-      --text-size: clamp(20px, 5.15vw, 37px);
-      --choice-size: clamp(16px, 4.15vw, 29px);
-      --small-size: clamp(12px, 3vw, 18px);
-      --final-size: clamp(22px, 5.2vw, 38px);
-      --letter-space: .045em;
+      --text-size: clamp(24px, 6.15vw, 44px);
+      --choice-size: clamp(19px, 4.8vw, 33px);
+      --small-size: clamp(14px, 3.45vw, 20px);
+      --final-size: clamp(25px, 6.2vw, 43px);
+      --letter-space: .08em;
       --box-size: clamp(62px, 17vw, 112px);
       --hold-progress: 0;
       --screen-x: 0px;
@@ -82,7 +82,7 @@
       left: 50%;
       top: 40%;
       z-index: 20;
-      width: min(85vw, 760px);
+      width: min(90vw, 820px);
       min-height: 1.5em;
       color: #fff;
       font-size: var(--text-size);
@@ -160,17 +160,24 @@
       }
     }
 
+    /*
+      마지막 문장은 모든 글자와 공백의 자리를 먼저 확보한 뒤
+      글자만 하나씩 드러냅니다. 공백 때문에 문장 전체가 밀리지 않습니다.
+    */
     .final-char {
       display: inline-block;
       min-width: .01em;
       opacity: 0;
-      animation: final-char-appear .01s steps(1, end) forwards;
+      visibility: hidden;
     }
 
-    @keyframes final-char-appear {
-      to {
-        opacity: 1;
-      }
+    .final-char.revealed {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .final-char.final-space {
+      visibility: hidden;
     }
 
     /* ------------------------------
@@ -738,7 +745,7 @@
     #created-text {
       top: 68%;
       z-index: 44;
-      font-size: clamp(19px, 4.9vw, 35px);
+      font-size: clamp(23px, 5.8vw, 41px);
     }
 
     /* ------------------------------
@@ -775,7 +782,7 @@
       scrollbar-width: none;
       scroll-behavior: smooth;
       color: rgba(255, 255, 255, .55);
-      font-size: clamp(11px, 2.7vw, 17px);
+      font-size: clamp(13px, 3.15vw, 19px);
       line-height: 1.55;
       text-align: left;
       letter-spacing: .08em;
@@ -929,7 +936,7 @@
     #cancel-text {
       top: 48%;
       z-index: 100;
-      font-size: clamp(18px, 4.7vw, 32px);
+      font-size: clamp(22px, 5.45vw, 38px);
       line-height: 1.55;
     }
 
@@ -964,7 +971,7 @@
     #revisit-text {
       width: min(86vw, 720px);
       color: #fff;
-      font-size: clamp(21px, 5.3vw, 40px);
+      font-size: clamp(24px, 6vw, 44px);
       line-height: 1.4;
       text-align: center;
       text-shadow:
@@ -998,12 +1005,14 @@
 
     @media (max-width: 390px) {
       :root {
-        --text-size: clamp(19px, 5.05vw, 31px);
-        --choice-size: clamp(15px, 3.9vw, 25px);
+        --text-size: clamp(24px, 6.25vw, 36px);
+        --choice-size: clamp(19px, 4.9vw, 29px);
+        --small-size: clamp(14px, 3.55vw, 18px);
+        --final-size: clamp(25px, 6.35vw, 37px);
       }
 
       .text-layer {
-        width: 88vw;
+        width: 91vw;
       }
 
       #choice-panel {
@@ -1101,7 +1110,7 @@
     const STORAGE_KEY = "a_world_completed_v8";
     const HOLD_REQUIRED_MS = 3500;
     const PAGE_GAP_MS = 2000;
-    const FINAL_BLACK_GAP_MS = 5000;
+    const FINAL_BLACK_GAP_MS = 4000;
     const WHISPER_AUDIO_SRC = "./do-you-know-what-you-have-done.mp3";
 
     const SPEED = {
@@ -1516,6 +1525,54 @@
       }
     }
 
+    async function typeFixedLayoutFinal(target, text, options = {}) {
+      target.textContent = "";
+
+      const fragment = document.createDocumentFragment();
+      const revealQueue = [];
+
+      for (const character of Array.from(text)) {
+        if (character === "\n") {
+          fragment.appendChild(document.createElement("br"));
+          revealQueue.push({ character, span: null });
+          continue;
+        }
+
+        const span = document.createElement("span");
+        span.className = "final-char";
+
+        if (character === " ") {
+          span.classList.add("final-space");
+          span.textContent = "\u00A0";
+        } else {
+          span.textContent = character;
+        }
+
+        fragment.appendChild(span);
+        revealQueue.push({ character, span });
+      }
+
+      /* 전체 문장의 위치와 공백 폭을 먼저 확정합니다. */
+      target.appendChild(fragment);
+      void target.offsetWidth;
+
+      for (const item of revealQueue) {
+        if (item.character === "\n") {
+          await sleep(options.lineBreakPause ?? SPEED.lineBreak);
+          continue;
+        }
+
+        if (item.character === " ") {
+          /* 공백은 처음부터 자리를 차지하고, 타이핑 리듬만 유지합니다. */
+          await sleep(options.spaceDelay ?? 120);
+          continue;
+        }
+
+        item.span.classList.add("revealed");
+        await sleep(getDelay(item.character, options));
+      }
+    }
+
     function staticTrembleText(element, text) {
       element.textContent = "";
 
@@ -1634,7 +1691,7 @@
       await typeSegments(narration, segments, options.typing);
 
       if (options.advance === "auto") {
-        await sleep(options.autoWait ?? 2000);
+        await sleep(options.autoWait ?? 1000);
       } else {
         await waitForTap({ guide: options.guide });
       }
@@ -1726,7 +1783,7 @@
         }
       ]);
 
-      await sleep(3000);
+      await sleep(2000);
       await fadeOutText(narration, { duration: 340 });
       await sleep(900);
 
@@ -1829,7 +1886,7 @@
             pauseAfter: 260
           },
           {
-            text: " 모두가 자신만의 세계 하나쯤은\n가지고 있습니다.",
+            text: " 모두가 자신만의\n세계 하나쯤은\n가지고 있습니다.",
             delay: SPEED.normal,
             randomDelay: SPEED.normalRandom
           }
@@ -1895,7 +1952,7 @@
         ],
         {
           advance: "auto",
-          autoWait: 2000,
+          autoWait: 1000,
           gap: 700
         }
       );
@@ -2064,7 +2121,7 @@
       await typeSegments(createdText, segments, options.typing);
 
       if (options.advance === "auto") {
-        await sleep(options.autoWait ?? 2000);
+        await sleep(options.autoWait ?? 1000);
       } else {
         await waitForTap();
       }
@@ -2131,7 +2188,7 @@
         ],
         {
           advance: "auto",
-          autoWait: 5000,
+          autoWait: 4000,
           gap: 900
         }
       );
@@ -2245,19 +2302,14 @@
       prepareTextLayer(finalText);
       playWhisperVoice();
 
-      await typeSegments(
+      await typeFixedLayoutFinal(
         finalText,
-        [
-          {
-            text: "네가 무슨 짓을 했는지 알아?",
-            delay: SPEED.final,
-            randomDelay: SPEED.finalRandom,
-            punctuationPause: 600,
-            plainFinal: true
-          }
-        ],
+        "네가 무슨 짓을 했는지 알아?",
         {
-          plainFinal: true
+          delay: SPEED.final,
+          randomDelay: SPEED.finalRandom,
+          punctuationPause: 600,
+          spaceDelay: 120
         }
       );
 
