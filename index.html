@@ -1,0 +1,2034 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>a world</title>
+
+  <style>
+    @font-face {
+      font-family: "DeterminationK2";
+      src:
+        url("./DeterminationSansK2-FIX.woff2?v=12") format("woff2"),
+        url("./DeterminationSansK2-FIX.woff?v=12") format("woff");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root {
+      --bg: #000;
+      --fg: #fff;
+      --text-size: clamp(21px, 5.15vw, 36px);
+      --created-text-size: clamp(20px, 5vw, 34px);
+      --final-text-size: clamp(23px, 5.8vw, 42px);
+      --small-text-size: clamp(12px, 3vw, 18px);
+      --letter-space: .045em;
+      --box-size: clamp(54px, 15vw, 94px);
+      --hold-progress: 0;
+      --shake-x: 0px;
+      --shake-y: 0px;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: "DeterminationK2", "Noto Sans KR", system-ui, sans-serif;
+      letter-spacing: var(--letter-space);
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    body.dead {
+      cursor: none;
+      touch-action: none;
+    }
+
+    button {
+      font: inherit;
+      color: inherit;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    #app {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      background: #000;
+      transform: translate(var(--shake-x), var(--shake-y));
+    }
+
+    .narration {
+      position: absolute;
+      left: 50%;
+      top: 40%;
+      z-index: 5;
+      width: min(84vw, 760px);
+      transform: translate(-50%, -50%);
+      color: #fff;
+      font-size: var(--text-size);
+      line-height: 1.56;
+      text-align: center;
+      white-space: normal;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+      opacity: 0;
+      filter: blur(1px);
+      transition:
+        opacity .18s steps(2, end),
+        filter .18s steps(2, end);
+      pointer-events: none;
+      text-shadow:
+        0 0 5px rgba(255,255,255,.72),
+        0 0 15px rgba(255,255,255,.23);
+    }
+
+    .narration.visible {
+      opacity: 1;
+      filter: blur(0);
+    }
+
+    .narration.clearing {
+      opacity: 0;
+      filter: blur(2px);
+    }
+
+    .created-text {
+      position: absolute;
+      left: 50%;
+      top: 64%;
+      z-index: 45;
+      width: min(84vw, 760px);
+      transform: translateX(-50%);
+      color: #fff;
+      font-size: var(--created-text-size);
+      line-height: 1.55;
+      text-align: center;
+      white-space: normal;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+      opacity: 0;
+      transition: opacity .18s steps(2, end);
+      text-shadow:
+        0 0 5px rgba(255,255,255,.72),
+        0 0 15px rgba(255,255,255,.22);
+    }
+
+    .created-text.visible {
+      opacity: 1;
+    }
+
+    .type-tick {
+      animation: undertale-box-tick .035s steps(1, end) both;
+    }
+
+    @keyframes undertale-box-tick {
+      0% {
+        filter: brightness(1);
+      }
+
+      50% {
+        filter: brightness(1.28);
+      }
+
+      100% {
+        filter: brightness(1);
+      }
+    }
+
+    .typed-char {
+      display: inline;
+      opacity: 0;
+      animation: undertale-char-in .001s steps(1, end) forwards;
+      text-shadow:
+        0 0 3px rgba(255,255,255,.74),
+        0 0 9px rgba(255,255,255,.18);
+    }
+
+    @keyframes undertale-char-in {
+      to {
+        opacity: 1;
+      }
+    }
+
+    #touch-hint {
+      position: fixed;
+      left: 50%;
+      top: 63%;
+      z-index: 8;
+      transform: translate(-50%, -50%);
+      color: rgba(255,255,255,.72);
+      font-size: var(--small-text-size);
+      letter-spacing: .18em;
+      text-shadow:
+        0 0 5px rgba(255,255,255,.84),
+        0 0 18px rgba(255,255,255,.42);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #touch-hint.visible {
+      animation: touch-hint-drift 1.8s ease-in-out infinite;
+    }
+
+    @keyframes touch-hint-drift {
+      0%,
+      100% {
+        opacity: .28;
+        transform: translate(-50%, -50%) translateX(-2px);
+      }
+
+      50% {
+        opacity: .9;
+        transform: translate(-50%, -50%) translateX(2px);
+      }
+    }
+
+    .box-stage {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      opacity: 0;
+      transition: opacity 1.05s ease;
+    }
+
+    .box-stage.visible {
+      opacity: 1;
+    }
+
+    .box-wrap {
+      position: relative;
+      width: calc(var(--box-size) * 2.8);
+      height: calc(var(--box-size) * 2.8);
+      display: grid;
+      place-items: center;
+      transform: translateY(-2vh);
+    }
+
+    .seed-aura {
+      position: absolute;
+      width: calc(var(--box-size) * 1.9);
+      height: calc(var(--box-size) * 1.9);
+      border-radius: 50%;
+      background:
+        radial-gradient(circle, rgba(255,255,255,.2) 0 4%, transparent 5% 100%),
+        radial-gradient(circle, rgba(255,255,255,.13), transparent 64%);
+      opacity: .38;
+      filter: blur(1px);
+      animation: aura-breathe 3.6s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes aura-breathe {
+      0%,
+      100% {
+        opacity: .22;
+        transform: scale(.9);
+      }
+
+      50% {
+        opacity: .52;
+        transform: scale(1.08);
+      }
+    }
+
+    .seed-box {
+      position: relative;
+      width: var(--box-size);
+      height: var(--box-size);
+      border: 2px solid rgba(255,255,255,.78);
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.07), rgba(255,255,255,0) 45%),
+        #050505;
+      box-shadow:
+        inset 0 0 0 1px #000,
+        0 0 12px rgba(255,255,255,.18),
+        0 0 34px rgba(255,255,255,.06);
+      cursor: pointer;
+      opacity: .92;
+      animation: box-breathe 3.2s ease-in-out infinite;
+      outline: 0;
+    }
+
+    .seed-box::before,
+    .seed-box::after {
+      position: absolute;
+      inset: 0;
+      content: "";
+      pointer-events: none;
+    }
+
+    .seed-box::before {
+      background:
+        linear-gradient(
+          90deg,
+          transparent 0 47%,
+          rgba(255,255,255, calc(.12 + var(--hold-progress) * .5)) 48% 52%,
+          transparent 53% 100%
+        ),
+        linear-gradient(
+          0deg,
+          transparent 0 48%,
+          rgba(255,255,255, calc(.08 + var(--hold-progress) * .34)) 49% 51%,
+          transparent 52% 100%
+        );
+      opacity: calc(var(--hold-progress) * 1.2);
+    }
+
+    .seed-box::after {
+      border: 1px solid rgba(255,255,255, calc(.12 + var(--hold-progress) * .55));
+      transform: scale(calc(1 + var(--hold-progress) * .22));
+      opacity: calc(.2 + var(--hold-progress) * .9);
+      filter: blur(calc(var(--hold-progress) * 1.2px));
+    }
+
+    .box-stage.holding .seed-box {
+      animation: none;
+      box-shadow:
+        inset 0 0 0 1px #000,
+        0 0 calc(14px + var(--hold-progress) * 40px) rgba(255,255,255, calc(.2 + var(--hold-progress) * .62)),
+        0 0 calc(40px + var(--hold-progress) * 90px) rgba(255,255,255, calc(.05 + var(--hold-progress) * .22));
+      filter:
+        brightness(calc(1 + var(--hold-progress) * 2.2))
+        contrast(calc(1 + var(--hold-progress) * .8));
+    }
+
+    @keyframes box-breathe {
+      0%,
+      100% {
+        transform: translateY(0) scale(1);
+        filter: brightness(1);
+      }
+
+      50% {
+        transform: translateY(-3px) scale(1.025);
+        filter: brightness(1.16);
+      }
+    }
+
+    .crack {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 2px;
+      height: calc(var(--box-size) * .68);
+      background: rgba(255,255,255,.88);
+      opacity: 0;
+      transform-origin: center;
+      filter: blur(.2px);
+      pointer-events: none;
+    }
+
+    .box-stage.hold-mid .crack.one {
+      opacity: .62;
+      transform: translate(-50%, -50%) rotate(34deg);
+    }
+
+    .box-stage.hold-mid .crack.two {
+      opacity: .42;
+      transform: translate(-50%, -50%) rotate(-51deg) scaleY(.72);
+    }
+
+    .box-stage.hold-high .crack.three {
+      opacity: .76;
+      transform: translate(-50%, -50%) rotate(88deg) scaleY(.8);
+    }
+
+    .noise-field {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(
+          0deg,
+          rgba(255,255,255,.05) 0 1px,
+          transparent 1px 4px
+        );
+      mix-blend-mode: screen;
+    }
+
+    .box-stage.hold-high .noise-field {
+      opacity: .18;
+      animation: noise-flicker .16s steps(2, end) infinite;
+    }
+
+    @keyframes noise-flicker {
+      50% {
+        opacity: .38;
+        transform: translateX(2px);
+      }
+    }
+
+    .hold-particle {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: #fff;
+      opacity: 0;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .box-stage.hold-high .hold-particle {
+      animation: leak-particle 1.1s ease-out infinite;
+      animation-delay: var(--delay);
+    }
+
+    @keyframes leak-particle {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) rotate(var(--angle)) translateX(22px) scale(.3);
+      }
+
+      20% {
+        opacity: .85;
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) rotate(var(--angle)) translateX(calc(58px + var(--hold-progress) * 50px)) scale(1);
+      }
+    }
+
+    .step-back {
+      position: absolute;
+      left: 50%;
+      bottom: 9vh;
+      transform: translateX(-50%);
+      border: 0;
+      background: transparent;
+      color: rgba(255,255,255,.34);
+      font-size: var(--small-text-size);
+      letter-spacing: .08em;
+      opacity: 0;
+      cursor: pointer;
+      transition: opacity .9s ease, color .4s ease;
+    }
+
+    .step-back.visible {
+      opacity: 1;
+    }
+
+    .particle-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .burst-line,
+    .burst-piece {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      background: #fff;
+    }
+
+    .burst-line {
+      width: var(--length);
+      height: 2px;
+      transform:
+        translate(-50%, -50%)
+        rotate(var(--angle))
+        translateX(var(--distance));
+      animation: burst-line .58s cubic-bezier(.08, .76, .25, 1) forwards;
+      animation-delay: var(--delay);
+      box-shadow: 0 0 12px rgba(255,255,255,.8);
+    }
+
+    @keyframes burst-line {
+      0% {
+        opacity: 0;
+        transform:
+          translate(-50%, -50%)
+          rotate(var(--angle))
+          translateX(0)
+          scaleX(.05);
+      }
+
+      16% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0;
+        transform:
+          translate(-50%, -50%)
+          rotate(var(--angle))
+          translateX(var(--distance))
+          scaleX(1);
+      }
+    }
+
+    .burst-piece {
+      width: var(--size);
+      height: var(--size);
+      transform:
+        translate(-50%, -50%)
+        rotate(var(--angle))
+        translateX(0);
+      animation: burst-piece .92s cubic-bezier(.07, .72, .19, 1) forwards;
+      animation-delay: var(--delay);
+      box-shadow: 0 0 8px rgba(255,255,255,.8);
+    }
+
+    @keyframes burst-piece {
+      0% {
+        opacity: 1;
+        transform:
+          translate(-50%, -50%)
+          rotate(var(--angle))
+          translateX(0)
+          rotate(0deg);
+      }
+
+      100% {
+        opacity: 0;
+        transform:
+          translate(-50%, -50%)
+          rotate(var(--angle))
+          translateX(var(--distance))
+          rotate(var(--spin));
+      }
+    }
+
+    .shockwave {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 30px;
+      height: 30px;
+      border: 2px solid rgba(255,255,255,.9);
+      border-radius: 50%;
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(.2);
+      animation: shockwave .78s ease-out forwards;
+      box-shadow:
+        0 0 20px rgba(255,255,255,.7),
+        inset 0 0 20px rgba(255,255,255,.2);
+    }
+
+    @keyframes shockwave {
+      0% {
+        opacity: .9;
+        transform: translate(-50%, -50%) scale(.2);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(24);
+      }
+    }
+
+    .whiteout {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      background: #fff;
+      opacity: 0;
+      pointer-events: none;
+      transition: none;
+    }
+
+    .whiteout.active {
+      opacity: 1;
+    }
+
+    .whiteout.fade-away {
+      transition: opacity 1.15s ease;
+      opacity: 0;
+    }
+
+    .created-scene {
+      position: absolute;
+      inset: 0;
+      z-index: 40;
+      display: grid;
+      place-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .7s ease;
+    }
+
+    .created-scene.visible {
+      opacity: 1;
+    }
+
+    .hands-world {
+      position: relative;
+      width: min(78vw, 520px);
+      height: min(70vw, 440px);
+      transform: translateY(3vh);
+    }
+
+    .hands {
+      position: absolute;
+      left: 50%;
+      bottom: 10%;
+      width: 82%;
+      height: 36%;
+      transform: translateX(-50%);
+      opacity: .72;
+      filter: drop-shadow(0 0 8px rgba(255,255,255,.18));
+    }
+
+    .hand {
+      position: absolute;
+      bottom: 0;
+      width: 44%;
+      height: 78%;
+      border: 2px solid rgba(255,255,255,.78);
+      border-top: 0;
+      background: transparent;
+    }
+
+    .hand.left {
+      left: 5%;
+      border-radius: 65% 30% 42% 60%;
+      transform: rotate(12deg);
+      border-right: 0;
+    }
+
+    .hand.right {
+      right: 5%;
+      border-radius: 30% 65% 60% 42%;
+      transform: rotate(-12deg);
+      border-left: 0;
+    }
+
+    .hand.left::before,
+    .hand.right::before {
+      position: absolute;
+      top: 5%;
+      width: 72%;
+      height: 34%;
+      content: "";
+      border-top: 2px solid rgba(255,255,255,.62);
+      border-radius: 50%;
+    }
+
+    .hand.left::before {
+      right: -5%;
+      transform: rotate(-18deg);
+    }
+
+    .hand.right::before {
+      left: -5%;
+      transform: rotate(18deg);
+    }
+
+    .world-cube {
+      position: absolute;
+      left: 50%;
+      top: 26%;
+      width: clamp(58px, 15vw, 102px);
+      height: clamp(58px, 15vw, 102px);
+      transform-style: preserve-3d;
+      transform: translate(-50%, -50%) rotateX(58deg) rotateZ(45deg);
+      animation: cube-rotate 6s linear infinite;
+      filter: drop-shadow(0 0 16px rgba(255,255,255,.36));
+    }
+
+    .world-cube::before,
+    .world-cube::after {
+      position: absolute;
+      inset: 0;
+      content: "";
+      border: 2px solid rgba(255,255,255,.88);
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.18), transparent 40%),
+        rgba(0,0,0,.15);
+    }
+
+    .world-cube::after {
+      transform: translateZ(22px);
+      opacity: .62;
+    }
+
+    @keyframes cube-rotate {
+      0% {
+        transform: translate(-50%, -50%) rotateX(58deg) rotateZ(0deg);
+      }
+
+      100% {
+        transform: translate(-50%, -50%) rotateX(58deg) rotateZ(360deg);
+      }
+    }
+
+    .world-cube.error-spin {
+      animation: cube-error-spin .12s steps(2, end) infinite;
+    }
+
+    @keyframes cube-error-spin {
+      0% {
+        transform: translate(-50%, -50%) rotateX(58deg) rotateZ(0deg);
+        filter: drop-shadow(0 0 18px rgba(255,255,255,.38));
+      }
+
+      50% {
+        transform: translate(calc(-50% - 4px), calc(-50% + 1px)) rotateX(58deg) rotateZ(33deg);
+        filter: drop-shadow(0 0 28px rgba(255,255,255,.7));
+      }
+
+      100% {
+        transform: translate(calc(-50% + 3px), calc(-50% - 2px)) rotateX(58deg) rotateZ(78deg);
+        filter: drop-shadow(0 0 13px rgba(255,255,255,.22));
+      }
+    }
+
+    .logs {
+      position: absolute;
+      left: 5vw;
+      top: 12vh;
+      z-index: 45;
+      display: grid;
+      gap: 6px;
+      color: rgba(255,255,255,.42);
+      font-size: clamp(11px, 2.7vw, 17px);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .logs.visible {
+      opacity: 1;
+    }
+
+    .log-line {
+      opacity: 0;
+      transform: translateX(-8px);
+      animation: log-in .22s steps(2, end) forwards;
+    }
+
+    .log-line.error {
+      color: rgba(255,255,255,.9);
+      text-shadow: 0 0 9px rgba(255,255,255,.65);
+      animation: log-error .13s steps(2, end) infinite;
+    }
+
+    @keyframes log-in {
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes log-error {
+      0% {
+        opacity: .9;
+        transform: translateX(0);
+      }
+
+      50% {
+        opacity: .24;
+        transform: translateX(-4px);
+      }
+
+      100% {
+        opacity: .8;
+        transform: translateX(3px);
+      }
+    }
+
+    .system-line {
+      position: absolute;
+      right: 5vw;
+      bottom: 18vh;
+      z-index: 46;
+      color: rgba(255,255,255,.72);
+      font-size: clamp(11px, 2.6vw, 16px);
+      letter-spacing: .12em;
+      opacity: 0;
+      text-transform: lowercase;
+      pointer-events: none;
+    }
+
+    .system-line.visible {
+      opacity: 1;
+      animation: system-glitch .18s steps(2, end) infinite;
+    }
+
+    @keyframes system-glitch {
+      50% {
+        opacity: .24;
+        transform: translateX(-5px);
+        filter: blur(.8px);
+      }
+    }
+
+    .glitch-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 66;
+      opacity: 0;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(
+          0deg,
+          rgba(255,255,255,.08) 0 1px,
+          transparent 1px 5px
+        );
+      mix-blend-mode: screen;
+    }
+
+    .glitch-overlay.active {
+      opacity: .35;
+      animation: screen-error .12s steps(2, end) infinite;
+    }
+
+    @keyframes screen-error {
+      0% {
+        transform: translateX(0);
+        opacity: .2;
+      }
+
+      50% {
+        transform: translateX(-7px);
+        opacity: .55;
+      }
+
+      100% {
+        transform: translateX(5px);
+        opacity: .32;
+      }
+    }
+
+    .hard-cut {
+      position: fixed;
+      inset: 0;
+      z-index: 69;
+      display: none;
+      background: #000;
+      pointer-events: none;
+    }
+
+    .hard-cut.active {
+      display: block;
+    }
+
+    .final-text {
+      position: absolute;
+      left: 50%;
+      top: 48%;
+      z-index: 70;
+      width: min(86vw, 760px);
+      transform: translate(-50%, -50%);
+      color: #fff;
+      font-size: var(--final-text-size);
+      line-height: 1.42;
+      text-align: center;
+      white-space: normal;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+      opacity: 0;
+      pointer-events: none;
+      text-shadow:
+        0 0 4px rgba(255,255,255,.95),
+        0 0 14px rgba(255,255,255,.68),
+        0 0 30px rgba(255,255,255,.32);
+    }
+
+    .final-text.visible {
+      opacity: 1;
+    }
+
+    .final-char {
+      display: inline-block;
+      opacity: 0;
+      min-width: .01em;
+      transform: translate(var(--fx1), var(--fy1));
+      animation:
+        final-char-in .001s steps(1, end) forwards,
+        final-char-drift var(--fd) ease-in-out infinite alternate;
+      animation-delay: 0s, var(--delay);
+      text-shadow:
+        0 0 4px rgba(255,255,255,.95),
+        0 0 13px rgba(255,255,255,.75),
+        0 0 30px rgba(255,255,255,.35);
+    }
+
+    @keyframes final-char-in {
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes final-char-drift {
+      0% {
+        transform: translate(var(--fx1), var(--fy1));
+        filter: brightness(.95);
+      }
+
+      50% {
+        transform: translate(var(--fx2), var(--fy2));
+        filter: brightness(1.34);
+      }
+
+      100% {
+        transform: translate(var(--fx3), var(--fy3));
+        filter: brightness(1.05);
+      }
+    }
+
+    .tv-line {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      z-index: 80;
+      width: 0;
+      height: 2px;
+      background: #fff;
+      opacity: 0;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 20px rgba(255,255,255,.9);
+      pointer-events: none;
+    }
+
+    .tv-line.active {
+      animation: tv-off .58s cubic-bezier(.2, .7, .2, 1) forwards;
+    }
+
+    @keyframes tv-off {
+      0% {
+        width: 100vw;
+        height: 100vh;
+        opacity: .9;
+      }
+
+      45% {
+        width: 100vw;
+        height: 2px;
+        opacity: 1;
+      }
+
+      78% {
+        width: 42vw;
+        height: 1px;
+        opacity: 1;
+      }
+
+      100% {
+        width: 0;
+        height: 1px;
+        opacity: 0;
+      }
+    }
+
+    .dead-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      background: #000;
+      pointer-events: all;
+      cursor: none;
+    }
+
+    .dead-overlay.active {
+      display: block;
+    }
+
+    .revisit {
+      position: fixed;
+      inset: 0;
+      z-index: 120;
+      display: none;
+      place-items: center;
+      background: #000;
+      pointer-events: all;
+    }
+
+    .revisit.active {
+      display: grid;
+    }
+
+    .revisit-text {
+      width: min(88vw, 760px);
+      color: #fff;
+      font-size: clamp(22px, 5.5vw, 42px);
+      line-height: 1.35;
+      text-align: center;
+      opacity: .82;
+      filter: blur(.4px);
+      animation: revisit-flicker 2.1s steps(2, end) infinite;
+      text-shadow:
+        0 0 5px rgba(255,255,255,.8),
+        0 0 16px rgba(255,255,255,.26);
+    }
+
+    @keyframes revisit-flicker {
+      0%,
+      12%,
+      100% {
+        opacity: .9;
+        transform: translate(0, 0);
+      }
+
+      16% {
+        opacity: .18;
+        transform: translateX(-2px);
+      }
+
+      46% {
+        opacity: .35;
+        transform: translateX(3px);
+      }
+
+      75% {
+        opacity: .08;
+      }
+    }
+
+    .cancel-text {
+      position: fixed;
+      left: 50%;
+      top: 48%;
+      z-index: 90;
+      width: min(86vw, 600px);
+      transform: translate(-50%, -50%);
+      color: #fff;
+      font-size: clamp(18px, 4.8vw, 34px);
+      line-height: 1.55;
+      text-align: center;
+      white-space: normal;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+      opacity: 0;
+      transition: opacity .24s steps(2, end);
+      pointer-events: none;
+      text-shadow:
+        0 0 5px rgba(255,255,255,.74),
+        0 0 16px rgba(255,255,255,.24);
+    }
+
+    .cancel-text.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <main id="app" aria-label="a world">
+    <div id="narration" class="narration"></div>
+    <div id="touch-hint">터치</div>
+
+    <section id="box-stage" class="box-stage" hidden>
+      <div class="noise-field"></div>
+
+      <div class="box-wrap">
+        <div class="seed-aura"></div>
+
+        <button id="seed-box" class="seed-box" type="button" aria-label="작은 상자">
+          <span class="crack one"></span>
+          <span class="crack two"></span>
+          <span class="crack three"></span>
+        </button>
+
+        <span class="hold-particle" style="--angle: 12deg; --delay: .05s;"></span>
+        <span class="hold-particle" style="--angle: 71deg; --delay: .18s;"></span>
+        <span class="hold-particle" style="--angle: 138deg; --delay: .02s;"></span>
+        <span class="hold-particle" style="--angle: 203deg; --delay: .24s;"></span>
+        <span class="hold-particle" style="--angle: 277deg; --delay: .12s;"></span>
+        <span class="hold-particle" style="--angle: 322deg; --delay: .3s;"></span>
+      </div>
+
+      <button id="step-back" class="step-back" type="button">step back</button>
+    </section>
+
+    <div id="particle-layer" class="particle-layer" aria-hidden="true"></div>
+    <div id="whiteout" class="whiteout" aria-hidden="true"></div>
+
+    <section id="created-scene" class="created-scene" hidden>
+      <div class="hands-world">
+        <div id="world-cube" class="world-cube"></div>
+
+        <div class="hands">
+          <div class="hand left"></div>
+          <div class="hand right"></div>
+        </div>
+      </div>
+
+      <div id="created-text" class="created-text"></div>
+      <div id="logs" class="logs"></div>
+      <div id="system-line" class="system-line"></div>
+    </section>
+
+    <div id="glitch-overlay" class="glitch-overlay" aria-hidden="true"></div>
+    <div id="hard-cut" class="hard-cut" aria-hidden="true"></div>
+    <div id="final-text" class="final-text"></div>
+    <div id="tv-line" class="tv-line" aria-hidden="true"></div>
+    <div id="cancel-text" class="cancel-text"></div>
+  </main>
+
+  <div id="dead-overlay" class="dead-overlay" aria-hidden="true"></div>
+
+  <section id="revisit" class="revisit" aria-label="revisit">
+    <div id="revisit-text" class="revisit-text"></div>
+  </section>
+
+  <script>
+    const STORAGE_KEY = "a_world_completed_rebuild_v1";
+    const HOLD_REQUIRED_MS = 3500;
+    const STEP_BACK_DELAY_MS = 11000;
+    const NEXT_PAGE_DELAY_MS = 620;
+    const FINAL_LINE = "방금 네가 무슨 짓을 했는지 알아?";
+
+    const TYPEWRITER_TIMING = {
+      startDelay: 260,
+      baseTypingDelay: 132,
+      randomTypingDelay: 36,
+      spacePause: 36,
+      punctuationPause: 360,
+      lineBreakPause: 260,
+      rhythmPauseEvery: 7,
+      rhythmPauseDuration: 52
+    };
+
+    const FINAL_TYPEWRITER_TIMING = {
+      startDelay: 360,
+      baseTypingDelay: 255,
+      randomTypingDelay: 80,
+      spacePause: 95,
+      punctuationPause: 520
+    };
+
+    const $ = (selector) => document.querySelector(selector);
+    const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+    const narration = $("#narration");
+    const touchHint = $("#touch-hint");
+    const boxStage = $("#box-stage");
+    const seedBox = $("#seed-box");
+    const stepBack = $("#step-back");
+    const particleLayer = $("#particle-layer");
+    const whiteout = $("#whiteout");
+    const createdScene = $("#created-scene");
+    const createdText = $("#created-text");
+    const logs = $("#logs");
+    const systemLine = $("#system-line");
+    const worldCube = $("#world-cube");
+    const glitchOverlay = $("#glitch-overlay");
+    const hardCut = $("#hard-cut");
+    const finalText = $("#final-text");
+    const tvLine = $("#tv-line");
+    const deadOverlay = $("#dead-overlay");
+    const revisit = $("#revisit");
+    const revisitText = $("#revisit-text");
+    const cancelText = $("#cancel-text");
+
+    let holdStart = 0;
+    let holdRaf = 0;
+    let holding = false;
+    let completed = false;
+    let stepBackTimer = 0;
+    let waitingForTap = false;
+    let firstTouchHintUsed = false;
+
+    let audioContext = null;
+    let audioUnlocked = false;
+    let holdOscillator = null;
+    let holdGain = null;
+    let ambientOscillator = null;
+    let ambientGain = null;
+
+    if (new URLSearchParams(location.search).get("reset") === "1") {
+      localStorage.removeItem(STORAGE_KEY);
+      history.replaceState(null, "", location.pathname);
+    }
+
+    function randomBetween(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    function setShake(x, y) {
+      document.documentElement.style.setProperty("--shake-x", `${x}px`);
+      document.documentElement.style.setProperty("--shake-y", `${y}px`);
+    }
+
+    function clearShake() {
+      setShake(0, 0);
+    }
+
+    function setHoldProgress(value) {
+      const clamped = Math.max(0, Math.min(1, value));
+      document.documentElement.style.setProperty("--hold-progress", clamped.toFixed(3));
+    }
+
+    function initAudio() {
+      if (audioContext) {
+        return;
+      }
+
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
+      if (!AudioContextClass) {
+        return;
+      }
+
+      audioContext = new AudioContext();
+
+      ambientOscillator = audioContext.createOscillator();
+      ambientGain = audioContext.createGain();
+
+      ambientOscillator.type = "sine";
+      ambientOscillator.frequency.value = 38;
+      ambientGain.gain.value = 0.0001;
+
+      ambientOscillator.connect(ambientGain);
+      ambientGain.connect(audioContext.destination);
+      ambientOscillator.start();
+    }
+
+    function unlockAudio() {
+      initAudio();
+
+      if (!audioContext) {
+        return;
+      }
+
+      audioContext.resume?.();
+      audioUnlocked = true;
+
+      if (ambientGain) {
+        ambientGain.gain.cancelScheduledValues(audioContext.currentTime);
+        ambientGain.gain.setValueAtTime(.0001, audioContext.currentTime);
+        ambientGain.gain.linearRampToValueAtTime(.026, audioContext.currentTime + 2.2);
+      }
+    }
+
+    function playTapSound() {
+      if (!audioContext || !audioUnlocked) {
+        return;
+      }
+
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+
+      osc.type = "triangle";
+      osc.frequency.value = 160;
+      gain.gain.value = .0001;
+
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      osc.start();
+
+      osc.frequency.exponentialRampToValueAtTime(74, audioContext.currentTime + .08);
+      gain.gain.linearRampToValueAtTime(.035, audioContext.currentTime + .008);
+      gain.gain.exponentialRampToValueAtTime(.0001, audioContext.currentTime + .12);
+
+      window.setTimeout(() => {
+        try {
+          osc.stop();
+          osc.disconnect();
+          gain.disconnect();
+        } catch (error) {}
+      }, 150);
+    }
+
+    function startHoldSound() {
+      unlockAudio();
+
+      if (!audioContext || holdOscillator) {
+        return;
+      }
+
+      holdOscillator = audioContext.createOscillator();
+      holdGain = audioContext.createGain();
+
+      holdOscillator.type = "sawtooth";
+      holdOscillator.frequency.value = 64;
+      holdGain.gain.value = .0001;
+
+      holdOscillator.connect(holdGain);
+      holdGain.connect(audioContext.destination);
+
+      holdOscillator.start();
+      holdGain.gain.linearRampToValueAtTime(.075, audioContext.currentTime + .5);
+    }
+
+    function updateHoldSound(progress) {
+      if (!audioContext || !holdOscillator || !holdGain) {
+        return;
+      }
+
+      holdOscillator.frequency.setTargetAtTime(64 + progress * 110, audioContext.currentTime, .05);
+      holdGain.gain.setTargetAtTime(.06 + progress * .14, audioContext.currentTime, .05);
+    }
+
+    function stopHoldSound() {
+      if (!audioContext || !holdOscillator || !holdGain) {
+        return;
+      }
+
+      const oscillator = holdOscillator;
+      const gain = holdGain;
+
+      gain.gain.cancelScheduledValues(audioContext.currentTime);
+      gain.gain.setTargetAtTime(.0001, audioContext.currentTime, .04);
+
+      window.setTimeout(() => {
+        try {
+          oscillator.stop();
+          oscillator.disconnect();
+          gain.disconnect();
+        } catch (error) {}
+      }, 180);
+
+      holdOscillator = null;
+      holdGain = null;
+    }
+
+    function playBurstTone() {
+      unlockAudio();
+
+      if (!audioContext) {
+        return;
+      }
+
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+
+      osc.type = "square";
+      osc.frequency.value = 180;
+      gain.gain.value = .0001;
+
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      osc.start();
+
+      osc.frequency.exponentialRampToValueAtTime(840, audioContext.currentTime + .12);
+      osc.frequency.exponentialRampToValueAtTime(72, audioContext.currentTime + .42);
+
+      gain.gain.linearRampToValueAtTime(.24, audioContext.currentTime + .04);
+      gain.gain.exponentialRampToValueAtTime(.0001, audioContext.currentTime + .52);
+
+      window.setTimeout(() => {
+        try {
+          osc.stop();
+          osc.disconnect();
+          gain.disconnect();
+        } catch (error) {}
+      }, 620);
+    }
+
+    function playErrorRumble() {
+      if (!audioContext || !audioUnlocked) {
+        return;
+      }
+
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+
+      osc.type = "sawtooth";
+      osc.frequency.value = 52;
+      gain.gain.value = .0001;
+
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      osc.start();
+
+      gain.gain.linearRampToValueAtTime(.09, audioContext.currentTime + .05);
+      gain.gain.setTargetAtTime(.025, audioContext.currentTime + .75, .04);
+      gain.gain.exponentialRampToValueAtTime(.0001, audioContext.currentTime + 1.28);
+
+      window.setTimeout(() => {
+        try {
+          osc.stop();
+          osc.disconnect();
+          gain.disconnect();
+        } catch (error) {}
+      }, 1350);
+    }
+
+    function playHardCutSound() {
+      if (!audioContext || !audioUnlocked) {
+        return;
+      }
+
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+
+      osc.type = "square";
+      osc.frequency.value = 44;
+      gain.gain.value = .0001;
+
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      osc.start();
+
+      gain.gain.linearRampToValueAtTime(.25, audioContext.currentTime + .008);
+      gain.gain.exponentialRampToValueAtTime(.0001, audioContext.currentTime + .075);
+
+      window.setTimeout(() => {
+        try {
+          osc.stop();
+          osc.disconnect();
+          gain.disconnect();
+        } catch (error) {}
+      }, 120);
+    }
+
+    function playWhisperVoice() {
+      if (!("speechSynthesis" in window)) {
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance("Do you know what you've done?");
+      utterance.lang = "en-US";
+      utterance.rate = .68;
+      utterance.pitch = .35;
+      utterance.volume = .92;
+
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function createTypedCharacter(character) {
+      const span = document.createElement("span");
+
+      span.className = "typed-char";
+      span.textContent = character === " " ? "\u00A0" : character;
+
+      return span;
+    }
+
+    function createFinalCharacter(character) {
+      const span = document.createElement("span");
+
+      const x1 = randomBetween(-2.6, 2.6);
+      const y1 = randomBetween(-2.2, 2.2);
+      const x2 = randomBetween(-2.8, 2.8);
+      const y2 = randomBetween(-2.4, 2.4);
+      const x3 = randomBetween(-2.4, 2.4);
+      const y3 = randomBetween(-2.2, 2.2);
+
+      span.className = "final-char";
+      span.textContent = character === " " ? "\u00A0" : character;
+
+      span.style.setProperty("--fx1", `${x1.toFixed(2)}px`);
+      span.style.setProperty("--fy1", `${y1.toFixed(2)}px`);
+      span.style.setProperty("--fx2", `${x2.toFixed(2)}px`);
+      span.style.setProperty("--fy2", `${y2.toFixed(2)}px`);
+      span.style.setProperty("--fx3", `${x3.toFixed(2)}px`);
+      span.style.setProperty("--fy3", `${y3.toFixed(2)}px`);
+      span.style.setProperty("--fd", `${randomBetween(1.5, 3.7).toFixed(2)}s`);
+      span.style.setProperty("--delay", `${randomBetween(0, .8).toFixed(2)}s`);
+
+      return span;
+    }
+
+    function triggerTypeTick(element) {
+      element.classList.remove("type-tick");
+
+      void element.offsetWidth;
+
+      element.classList.add("type-tick");
+    }
+
+    function getTypewriterDelay(character, index, timing) {
+      let delay = timing.baseTypingDelay;
+
+      delay += Math.floor(randomBetween(0, timing.randomTypingDelay));
+
+      if (character === " ") {
+        delay += timing.spacePause ?? 0;
+      }
+
+      if (character === "\n") {
+        delay += timing.lineBreakPause ?? 0;
+      }
+
+      if (/[.!?,]/.test(character)) {
+        delay += timing.punctuationPause ?? 0;
+      }
+
+      if (
+        timing.rhythmPauseEvery &&
+        index > 0 &&
+        index % timing.rhythmPauseEvery === 0
+      ) {
+        delay += timing.rhythmPauseDuration;
+      }
+
+      return delay;
+    }
+
+    function typeText(element, text, options = {}) {
+      return new Promise((resolve) => {
+        const characters = Array.from(text);
+        const timing = options.final ? FINAL_TYPEWRITER_TIMING : TYPEWRITER_TIMING;
+
+        element._typeToken = (element._typeToken || 0) + 1;
+
+        const token = element._typeToken;
+
+        if (options.clear !== false) {
+          element.textContent = "";
+        }
+
+        let index = 0;
+
+        function typeNextCharacter() {
+          if (element._typeToken !== token) {
+            resolve();
+            return;
+          }
+
+          if (index >= characters.length) {
+            element.classList.remove("type-tick");
+            resolve();
+            return;
+          }
+
+          const character = characters[index];
+
+          if (character === "\n") {
+            element.appendChild(document.createElement("br"));
+          } else {
+            element.appendChild(
+              options.final
+                ? createFinalCharacter(character)
+                : createTypedCharacter(character)
+            );
+          }
+
+          if (!options.final) {
+            triggerTypeTick(element);
+          }
+
+          index += 1;
+
+          window.setTimeout(
+            typeNextCharacter,
+            getTypewriterDelay(character, index, timing)
+          );
+        }
+
+        window.setTimeout(
+          typeNextCharacter,
+          options.startDelay ?? timing.startDelay
+        );
+      });
+    }
+
+    function waitForScreenTap(options = {}) {
+      waitingForTap = true;
+
+      if (options.showHint) {
+        touchHint.classList.add("visible");
+        firstTouchHintUsed = true;
+      }
+
+      return new Promise((resolve) => {
+        function done(event) {
+          if (event) {
+            event.preventDefault();
+          }
+
+          waitingForTap = false;
+          touchHint.classList.remove("visible");
+
+          window.removeEventListener("pointerup", done, true);
+          window.removeEventListener("keydown", onKey, true);
+
+          unlockAudio();
+          playTapSound();
+
+          window.setTimeout(resolve, NEXT_PAGE_DELAY_MS);
+        }
+
+        function onKey(event) {
+          if (event.key === "Enter" || event.key === " ") {
+            done(event);
+          }
+        }
+
+        window.addEventListener("pointerup", done, true);
+        window.addEventListener("keydown", onKey, true);
+      });
+    }
+
+    async function showNarrationPage(text, options = {}) {
+      narration._typeToken = (narration._typeToken || 0) + 1;
+      narration.textContent = "";
+      narration.classList.remove("clearing");
+
+      await sleep(30);
+
+      narration.classList.add("visible");
+
+      await typeText(narration, text);
+
+      await waitForScreenTap({
+        showHint: Boolean(options.showHint) && !firstTouchHintUsed
+      });
+
+      narration.classList.add("clearing");
+
+      await sleep(210);
+
+      narration.classList.remove("visible", "clearing", "type-tick");
+      narration.textContent = "";
+    }
+
+    async function showCreatedPage(text) {
+      createdText._typeToken = (createdText._typeToken || 0) + 1;
+      createdText.textContent = "";
+      createdText.classList.add("visible");
+
+      await typeText(createdText, text);
+
+      await waitForScreenTap();
+
+      createdText.classList.remove("visible", "type-tick");
+
+      await sleep(210);
+
+      createdText.textContent = "";
+    }
+
+    async function startIntro() {
+      if (localStorage.getItem(STORAGE_KEY) === "1") {
+        showRevisit();
+        return;
+      }
+
+      document.body.classList.add("dead");
+
+      await sleep(800);
+
+      document.body.classList.remove("dead");
+
+      await showNarrationPage("...이제는 모두가 자신만의 세계 하나쯤은 가지고 있습니다.", {
+        showHint: true
+      });
+
+      await showNarrationPage("당신도 마찬가지이죠.");
+      await showNarrationPage("앞에 작은 상자가 놓여있군요.");
+      await showNarrationPage("때때로 모든 것은 단 하나의 점, 선, 네모에서 시작되곤 합니다.");
+      await showNarrationPage("당신이 지닌 작고 소중한 영향력이,");
+      await showNarrationPage("더 큰 꿈과 희망으로 피어날 수 있음을 보여주기에 충분한 녀석이 될 겁니다.");
+      await showNarrationPage("당신은 언제든 상자에 손을 올릴 수 있습니다.");
+
+      await showBox();
+    }
+
+    async function showBox() {
+      touchHint.classList.remove("visible");
+      boxStage.hidden = false;
+
+      await sleep(40);
+      boxStage.classList.add("visible");
+
+      stepBackTimer = window.setTimeout(() => {
+        if (!completed) {
+          stepBack.classList.add("visible");
+        }
+      }, STEP_BACK_DELAY_MS);
+    }
+
+    function beginHold(event) {
+      if (completed || waitingForTap) {
+        return;
+      }
+
+      event.preventDefault();
+
+      seedBox.setPointerCapture?.(event.pointerId);
+
+      startHoldSound();
+
+      holding = true;
+      holdStart = performance.now();
+
+      boxStage.classList.add("holding");
+      stepBack.classList.remove("visible");
+
+      holdRaf = requestAnimationFrame(updateHold);
+    }
+
+    function updateHold(now) {
+      if (!holding || completed) {
+        return;
+      }
+
+      const elapsed = now - holdStart;
+      const progress = Math.min(elapsed / HOLD_REQUIRED_MS, 1);
+
+      setHoldProgress(progress);
+      updateHoldSound(progress);
+
+      const shakeAmount =
+        progress < .2
+          ? .5
+          : progress < .45
+            ? 1.3
+            : progress < .72
+              ? 2.8
+              : 5.3;
+
+      setShake(
+        randomBetween(-shakeAmount, shakeAmount),
+        randomBetween(-shakeAmount * .45, shakeAmount * .45)
+      );
+
+      boxStage.classList.toggle("hold-mid", progress >= .22);
+      boxStage.classList.toggle("hold-high", progress >= .48);
+      boxStage.classList.toggle("hold-max", progress >= .72);
+
+      if (progress >= 1) {
+        completeHold();
+        return;
+      }
+
+      holdRaf = requestAnimationFrame(updateHold);
+    }
+
+    function cancelHold() {
+      if (!holding || completed) {
+        return;
+      }
+
+      holding = false;
+      cancelAnimationFrame(holdRaf);
+      stopHoldSound();
+
+      boxStage.classList.remove("holding", "hold-mid", "hold-high", "hold-max");
+
+      setHoldProgress(0);
+      clearShake();
+    }
+
+    async function completeHold() {
+      if (completed) {
+        return;
+      }
+
+      completed = true;
+      holding = false;
+
+      window.clearTimeout(stepBackTimer);
+      cancelAnimationFrame(holdRaf);
+      stopHoldSound();
+
+      setHoldProgress(1);
+      boxStage.classList.add("hold-mid", "hold-high", "hold-max");
+
+      clearShake();
+
+      await sleep(200);
+      await explodeWorld();
+    }
+
+    function createBurstParticles() {
+      particleLayer.innerHTML = "";
+
+      const shockwave = document.createElement("div");
+      shockwave.className = "shockwave";
+      particleLayer.append(shockwave);
+
+      for (let i = 0; i < 32; i += 1) {
+        const line = document.createElement("span");
+
+        line.className = "burst-line";
+        line.style.setProperty("--angle", `${randomBetween(0, 360)}deg`);
+        line.style.setProperty("--distance", `${randomBetween(120, 620)}px`);
+        line.style.setProperty("--length", `${randomBetween(70, 220)}px`);
+        line.style.setProperty("--delay", `${randomBetween(0, .08)}s`);
+
+        particleLayer.append(line);
+      }
+
+      for (let i = 0; i < 70; i += 1) {
+        const piece = document.createElement("span");
+
+        piece.className = "burst-piece";
+        piece.style.setProperty("--angle", `${randomBetween(0, 360)}deg`);
+        piece.style.setProperty("--distance", `${randomBetween(80, 480)}px`);
+        piece.style.setProperty("--size", `${randomBetween(2, 8)}px`);
+        piece.style.setProperty("--spin", `${randomBetween(-520, 520)}deg`);
+        piece.style.setProperty("--delay", `${randomBetween(0, .18)}s`);
+
+        particleLayer.append(piece);
+      }
+    }
+
+    async function explodeWorld() {
+      playBurstTone();
+      clearShake();
+
+      boxStage.classList.remove("holding");
+
+      createBurstParticles();
+
+      await sleep(90);
+
+      whiteout.classList.add("active");
+
+      await sleep(180);
+
+      boxStage.hidden = true;
+      boxStage.classList.remove("visible", "hold-mid", "hold-high", "hold-max");
+
+      await sleep(900);
+
+      await revealCreatedWorld();
+    }
+
+    async function revealCreatedWorld() {
+      createdScene.hidden = false;
+      createdScene.classList.add("visible");
+
+      whiteout.classList.add("fade-away");
+
+      await sleep(1150);
+
+      whiteout.classList.remove("active", "fade-away");
+      particleLayer.innerHTML = "";
+
+      await showCreatedPage("마침내... 손에 작은 세계를 쥐셨군요.");
+      await showCreatedPage("절대로, 절대로 놓지 마세요.");
+      await showCreatedPage("...시간이 흘러갑니다.");
+
+      await runTimeFlow();
+    }
+
+    async function runTimeFlow() {
+      createdText.classList.remove("visible");
+      logs.classList.add("visible");
+      logs.innerHTML = "";
+
+      const dayLogs = [
+        "DAY 000",
+        "DAY 001",
+        "DAY 007",
+        "DAY 030",
+        "DAY 422"
+      ];
+
+      for (const line of dayLogs) {
+        const element = document.createElement("div");
+        element.className = "log-line";
+        element.textContent = line;
+        logs.append(element);
+        await sleep(360);
+      }
+
+      await sleep(260);
+
+      await runDateError();
+    }
+
+    async function runDateError() {
+      playErrorRumble();
+
+      worldCube.classList.add("error-spin");
+      glitchOverlay.classList.add("active");
+
+      const errorLines = [
+        "DAY 5▒▒",
+        "DAY ▓▓1",
+        "DAY --",
+        "DAY ?",
+        "choice registered",
+        "interference confirmed"
+      ];
+
+      systemLine.classList.add("visible");
+
+      for (let i = 0; i < 14; i += 1) {
+        setShake(randomBetween(-7, 7), randomBetween(-2, 2));
+
+        logs.innerHTML = "";
+
+        const amount = 3 + Math.floor(Math.random() * 4);
+
+        for (let j = 0; j < amount; j += 1) {
+          const element = document.createElement("div");
+
+          element.className = "log-line error";
+          element.textContent =
+            errorLines[Math.floor(Math.random() * errorLines.length)];
+
+          logs.append(element);
+        }
+
+        systemLine.textContent =
+          errorLines[Math.floor(Math.random() * errorLines.length)];
+
+        await sleep(92);
+      }
+
+      clearShake();
+
+      await hardCutToFinal();
+    }
+
+    async function hardCutToFinal() {
+      playHardCutSound();
+
+      hardCut.classList.add("active");
+
+      createdScene.hidden = true;
+      createdScene.classList.remove("visible");
+      logs.classList.remove("visible");
+      logs.innerHTML = "";
+      systemLine.classList.remove("visible");
+      systemLine.textContent = "";
+      worldCube.classList.remove("error-spin");
+      glitchOverlay.classList.remove("active");
+
+      await sleep(260);
+
+      hardCut.classList.remove("active");
+
+      finalText.textContent = "";
+      finalText.classList.add("visible");
+
+      playWhisperVoice();
+
+      await typeText(finalText, FINAL_LINE, {
+        final: true
+      });
+
+      await sleep(1750);
+
+      tvLine.classList.add("active");
+
+      await sleep(250);
+
+      finalText.classList.remove("visible");
+
+      await sleep(650);
+
+      localStorage.setItem(STORAGE_KEY, "1");
+      enterDeadState();
+    }
+
+    function enterDeadState() {
+      document.body.classList.add("dead");
+      deadOverlay.classList.add("active");
+
+      window.addEventListener("click", blockEverything, true);
+      window.addEventListener("pointerdown", blockEverything, true);
+      window.addEventListener("touchstart", blockEverything, true);
+      window.addEventListener("keydown", blockEverything, true);
+      window.addEventListener("wheel", blockEverything, true);
+    }
+
+    function blockEverything(event) {
+      if (!deadOverlay.classList.contains("active")) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+    }
+
+    function showRevisit() {
+      document.body.classList.add("dead");
+
+      const phrases = [
+        "세계가 이미 구축되었습니다.",
+        "당신은 이미 세계에 들어와있습니다."
+      ];
+
+      revisitText.textContent =
+        phrases[Math.floor(Math.random() * phrases.length)];
+
+      revisit.classList.add("active");
+    }
+
+    async function runCancelRoute(event) {
+      event?.preventDefault();
+
+      if (completed) {
+        return;
+      }
+
+      completed = true;
+
+      window.clearTimeout(stepBackTimer);
+      cancelHold();
+
+      boxStage.classList.remove("visible");
+      tvLine.classList.add("active");
+
+      await sleep(720);
+
+      boxStage.hidden = true;
+
+      const phrases = [
+        "그것이 당신의 선택이라면, 잘 알겠습니다.",
+        "그 의사를 존중합니다."
+      ];
+
+      const phrase = phrases[Math.floor(Math.random() * phrases.length)];
+
+      cancelText.textContent = "";
+      cancelText.classList.add("visible");
+
+      await typeText(
+        cancelText,
+        `:( 요청이 취소됨. ${phrase}`
+      );
+
+      await waitForScreenTap();
+
+      cancelText.classList.remove("visible");
+      deadOverlay.classList.add("active");
+      document.body.classList.add("dead");
+    }
+
+    seedBox.addEventListener("pointerdown", beginHold);
+    seedBox.addEventListener("pointerup", cancelHold);
+    seedBox.addEventListener("pointercancel", cancelHold);
+    seedBox.addEventListener("lostpointercapture", cancelHold);
+
+    stepBack.addEventListener("click", runCancelRoute);
+
+    window.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+    });
+
+    window.addEventListener("pointerdown", () => {
+      unlockAudio();
+    }, { once: true });
+
+    window.addEventListener("keydown", () => {
+      unlockAudio();
+    }, { once: true });
+
+    window.addEventListener("beforeunload", () => {
+      if (completed) {
+        localStorage.setItem(STORAGE_KEY, "1");
+      }
+    });
+
+    startIntro();
+  </script>
+</body>
+</html>
