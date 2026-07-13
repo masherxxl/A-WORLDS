@@ -1190,7 +1190,10 @@
        → 페이드아웃이 끝난 뒤 다음 대사가 시작되기 전의 검은 화면 시간입니다.
 
        7) voice: false
-       → 특정 대사만 글자 효과음을 끄고 싶을 때 세그먼트에 추가합니다.
+       → 보이스가 시작된 뒤에도 특정 대사만 글자 효과음을 끄고 싶을 때 추가합니다.
+
+       [보이스 시작 지점]
+       → "당신의 영향력이 궁금하지 않으십니까?" 문장부터 자동으로 켜집니다.
     ====================================================================== */
 
     const SETTINGS = {
@@ -1265,50 +1268,62 @@
 
       /*
         글자 효과음 설정입니다.
+
+        [이번 버전의 적용 규칙]
+        1) 보이스는 "당신의 영향력이 궁금하지 않으십니까?"부터 시작합니다.
+        2) robot_1~4, whisper_1~4의 8개 파일만 사용합니다.
+        3) whisper : robot 선택 비율은 5 : 1입니다.
+           즉, 평균적으로 위스퍼가 5번쯤 나올 때 로봇이 1번 나옵니다.
+        4) 공간감은 Web Audio의 스테레오 위치 + 알고리즘 리버브로 만듭니다.
+
         실제 파일은 index.html 옆의 vocal_samples 폴더 안에 둡니다.
       */
       voice: {
         enabled: true,
         folder: "./vocal_samples/",
-        volume: 0.13,
-        playbackRateMin: 0.96,
-        playbackRateMax: 1.04,
-        maxConcurrent: 7,
+
+        /* 글자 보이스의 기본 크기입니다. */
+        volume: 0.52,
+
+        /* 재생 속도를 아주 조금 흔들어 반복감을 줄입니다. */
+        playbackRateMin: 0.95,
+        playbackRateMax: 1.05,
+        maxConcurrent: 8,
         playOnSpaces: false,
         playOnPunctuation: true,
+
+        /* 카테고리 선택 비율입니다. 구체적인 요청 예시에 맞춰 5:1로 설정했습니다. */
+        whisperWeight: 5,
+        robotWeight: 1,
+
+        /*
+          리버브와 공간감 수동 조절 구역
+          wet  : 잔향의 양
+          dry  : 원음의 양
+          seconds : 잔향 길이
+          decay   : 잔향이 사라지는 곡선의 강도
+          preDelay: 원음 뒤 잔향이 붙기 전의 짧은 지연
+          panRange: 좌우 공간 이동 폭. 0.20이면 좌우 20% 범위입니다.
+        */
+        reverb: {
+          enabled: true,
+          wet: 0.34,
+          dry: 0.88,
+          seconds: 2.15,
+          decay: 3.2,
+          preDelay: 0.032,
+          panRange: 0.20
+        },
+
         files: [
-        'demon_1.ogg',
-        'demon_2.ogg',
-        'demon_3.ogg',
-        'demon_4.ogg',
-        'female_light_1.ogg',
-        'female_light_2.ogg',
-        'female_light_3.ogg',
-        'female_light_4.ogg',
-        'female_standard_1.ogg',
-        'female_standard_2.ogg',
-        'female_standard_3.ogg',
-        'female_standard_4.ogg',
-        'male_deep_1.ogg',
-        'male_deep_2.ogg',
-        'male_deep_3.ogg',
-        'male_deep_4.ogg',
-        'male_standard_1.ogg',
-        'male_standard_2.ogg',
-        'male_standard_3.ogg',
-        'male_standard_4.ogg',
-        'quick_1.ogg',
-        'quick_2.ogg',
-        'quick_3.ogg',
-        'quick_4.ogg',
-        'robot_1.ogg',
-        'robot_2.ogg',
-        'robot_3.ogg',
-        'robot_4.ogg',
-        'whisper_1.ogg',
-        'whisper_2.ogg',
-        'whisper_3.ogg',
-        'whisper_4.ogg'
+          "robot_1.ogg",
+          "robot_2.ogg",
+          "robot_3.ogg",
+          "robot_4.ogg",
+          "whisper_1.ogg",
+          "whisper_2.ogg",
+          "whisper_3.ogg",
+          "whisper_4.ogg"
         ]
       },
 
@@ -1555,11 +1570,29 @@
 
     const availableBoxFrames = new Map();
     const voiceSampleBytes = new Map();
+
+    /*
+      { name, group, buffer } 형식으로 보관합니다.
+      group은 "whisper" 또는 "robot"입니다.
+    */
     const voiceBuffers = [];
 
     let audioContext = null;
+    let voiceMasterGain = null;
+    let voiceDryGain = null;
+    let voiceWetGain = null;
+    let voicePreDelay = null;
+    let voiceConvolver = null;
+    let voiceCompressor = null;
     let voiceDecodePromise = null;
+    let audioReadyPromise = null;
+    let audioUnlocked = false;
+    let voiceLoadFinished = false;
     let activeVoiceCount = 0;
+
+    /* 질문 장면 전까지는 false이며, influenceQuestionFlow에서 true로 전환됩니다. */
+    let typeVoiceSceneEnabled = false;
+    let lastVoiceName = "";
     let holdOscillator = null;
     let holdGain = null;
     let holdStart = 0;
@@ -1671,46 +1704,124 @@
       setBoxFrame(index);
     }
 
-    /* 페이지를 열자마자 작은 파일들을 미리 내려받습니다. 재생은 첫 터치 뒤에만 가능합니다. */
+    /*
+      페이지를 열자마자 보이스 파일을 미리 내려받습니다.
+      실제 재생 권한은 모바일 브라우저 정책상 첫 터치 이후에만 열립니다.
+    */
     async function preloadVoiceSampleBytes() {
       if (!SETTINGS.voice.enabled) {
+        voiceLoadFinished = true;
         return;
       }
 
-      await Promise.allSettled(
+      const results = await Promise.allSettled(
         SETTINGS.voice.files.map(async (filename) => {
           const src = `${SETTINGS.voice.folder}${filename}`;
-          const response = await fetch(src, { cache: "force-cache" });
+          const response = await fetch(src, { cache: "default" });
 
           if (!response.ok) {
-            throw new Error(`voice sample load failed: ${src}`);
+            throw new Error(`voice sample load failed: ${src} (${response.status})`);
           }
 
-          voiceSampleBytes.set(src, await response.arrayBuffer());
+          voiceSampleBytes.set(filename, await response.arrayBuffer());
         })
       );
+
+      voiceLoadFinished = true;
+
+      const failedCount = results.filter((result) => result.status === "rejected").length;
+
+      if (failedCount > 0) {
+        console.warn(`[A-WORLDS] 보이스 파일 ${failedCount}개를 불러오지 못했습니다.`);
+      }
     }
 
     const voiceBytePreloadPromise = preloadVoiceSampleBytes();
 
-    function initAudio() {
-      if (!audioContext) {
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    /*
+      외부 리버브 파일 없이 브라우저 안에서 잔향 데이터를 생성합니다.
+      좌우 채널을 서로 다르게 만들어 좁은 스피커에서도 약간의 깊이가 느껴집니다.
+    */
+    function createReverbImpulse(context, seconds, decay) {
+      const sampleRate = context.sampleRate;
+      const length = Math.max(1, Math.floor(sampleRate * seconds));
+      const impulse = context.createBuffer(2, length, sampleRate);
 
-        if (!AudioContextClass) {
-          return;
+      for (let channel = 0; channel < impulse.numberOfChannels; channel += 1) {
+        const data = impulse.getChannelData(channel);
+
+        for (let index = 0; index < length; index += 1) {
+          const progress = index / length;
+          const envelope = Math.pow(1 - progress, decay);
+          const earlyReflection = index < sampleRate * 0.085 ? 1.18 : 1;
+          data[index] = (Math.random() * 2 - 1) * envelope * earlyReflection;
         }
-
-        audioContext = new AudioContext();
       }
 
-      audioContext.resume?.();
-      decodeVoiceSamples();
+      return impulse;
+    }
+
+    function ensureAudioContext() {
+      if (audioContext) {
+        return audioContext;
+      }
+
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
+      if (!AudioContextClass) {
+        return null;
+      }
+
+      audioContext = new AudioContextClass();
+
+      /* 작은 샘플들이 겹쳐도 찢어지지 않도록 최종 출력에 부드러운 리미터를 둡니다. */
+      voiceMasterGain = audioContext.createGain();
+      voiceDryGain = audioContext.createGain();
+      voiceWetGain = audioContext.createGain();
+      voicePreDelay = audioContext.createDelay(0.25);
+      voiceConvolver = audioContext.createConvolver();
+      voiceCompressor = audioContext.createDynamicsCompressor();
+
+      voiceMasterGain.gain.value = 1;
+      voiceDryGain.gain.value = SETTINGS.voice.reverb.dry;
+      voiceWetGain.gain.value = SETTINGS.voice.reverb.enabled
+        ? SETTINGS.voice.reverb.wet
+        : 0;
+      voicePreDelay.delayTime.value = SETTINGS.voice.reverb.preDelay;
+      voiceConvolver.buffer = createReverbImpulse(
+        audioContext,
+        SETTINGS.voice.reverb.seconds,
+        SETTINGS.voice.reverb.decay
+      );
+
+      voiceCompressor.threshold.value = -14;
+      voiceCompressor.knee.value = 12;
+      voiceCompressor.ratio.value = 7;
+      voiceCompressor.attack.value = 0.004;
+      voiceCompressor.release.value = 0.16;
+
+      /* 원음 경로 */
+      voiceMasterGain.connect(voiceDryGain);
+      voiceDryGain.connect(voiceCompressor);
+
+      /* 잔향 경로 */
+      voiceMasterGain.connect(voicePreDelay);
+      voicePreDelay.connect(voiceConvolver);
+      voiceConvolver.connect(voiceWetGain);
+      voiceWetGain.connect(voiceCompressor);
+
+      voiceCompressor.connect(audioContext.destination);
+
+      return audioContext;
     }
 
     async function decodeVoiceSamples() {
       if (!SETTINGS.voice.enabled || !audioContext) {
-        return;
+        return false;
+      }
+
+      if (voiceBuffers.length > 0) {
+        return true;
       }
 
       if (voiceDecodePromise) {
@@ -1720,10 +1831,17 @@
       voiceDecodePromise = (async () => {
         await voiceBytePreloadPromise;
 
+        const entries = Array.from(voiceSampleBytes.entries());
         const decoded = await Promise.allSettled(
-          Array.from(voiceSampleBytes.values()).map((bytes) =>
-            audioContext.decodeAudioData(bytes.slice(0))
-          )
+          entries.map(async ([filename, bytes]) => {
+            const buffer = await audioContext.decodeAudioData(bytes.slice(0));
+
+            return {
+              name: filename,
+              group: filename.startsWith("whisper_") ? "whisper" : "robot",
+              buffer
+            };
+          })
         );
 
         voiceBuffers.length = 0;
@@ -1733,13 +1851,74 @@
             voiceBuffers.push(result.value);
           }
         }
+
+        if (voiceBuffers.length === 0) {
+          console.warn("[A-WORLDS] 보이스 파일 디코딩 결과가 0개입니다.");
+        }
+
+        return voiceBuffers.length > 0;
       })();
 
-      return voiceDecodePromise;
+      const success = await voiceDecodePromise;
+
+      /* 일시적인 네트워크 실패였다면 다음 터치에서 한 번 더 시도할 수 있게 합니다. */
+      if (!success) {
+        voiceDecodePromise = null;
+      }
+
+      return success;
+    }
+
+    async function unlockAudio() {
+      if (audioReadyPromise) {
+        return audioReadyPromise;
+      }
+
+      audioReadyPromise = (async () => {
+        const context = ensureAudioContext();
+
+        if (!context) {
+          return false;
+        }
+
+        try {
+          if (context.state !== "running") {
+            await context.resume();
+          }
+
+          audioUnlocked = context.state === "running";
+
+          if (!audioUnlocked) {
+            return false;
+          }
+
+          await decodeVoiceSamples();
+          return true;
+        } catch (error) {
+          console.warn("[A-WORLDS] 오디오 활성화 실패", error);
+          return false;
+        } finally {
+          /* 실패한 경우 다음 사용자 터치에서 재시도할 수 있도록 잠금을 풉니다. */
+          if (!audioUnlocked || voiceBuffers.length === 0) {
+            audioReadyPromise = null;
+          }
+        }
+      })();
+
+      return audioReadyPromise;
+    }
+
+    /* 기존 호출부와의 호환을 위해 남겨둔 비동기 시작 함수입니다. */
+    function initAudio() {
+      void unlockAudio();
     }
 
     function shouldPlayVoice(character, options = {}) {
-      if (!SETTINGS.voice.enabled || options.voice === false) {
+      if (
+        !SETTINGS.voice.enabled ||
+        !typeVoiceSceneEnabled ||
+        options.voice === false
+      ) {
         return false;
       }
 
@@ -1758,12 +1937,51 @@
       return true;
     }
 
+    function pickWeightedVoice() {
+      const whisperPool = voiceBuffers.filter((item) => item.group === "whisper");
+      const robotPool = voiceBuffers.filter((item) => item.group === "robot");
+
+      if (whisperPool.length === 0 && robotPool.length === 0) {
+        return null;
+      }
+
+      const whisperWeight = Math.max(0, SETTINGS.voice.whisperWeight);
+      const robotWeight = Math.max(0, SETTINGS.voice.robotWeight);
+      const totalWeight = whisperWeight + robotWeight || 1;
+      const wantsWhisper = Math.random() * totalWeight < whisperWeight;
+
+      let pool = wantsWhisper ? whisperPool : robotPool;
+
+      if (pool.length === 0) {
+        pool = wantsWhisper ? robotPool : whisperPool;
+      }
+
+      if (pool.length === 0) {
+        return null;
+      }
+
+      /* 같은 샘플이 바로 연속으로 나오지 않게 몇 번 다시 뽑습니다. */
+      let picked = pool[Math.floor(Math.random() * pool.length)];
+
+      for (let attempt = 0; attempt < 4 && pool.length > 1; attempt += 1) {
+        if (picked.name !== lastVoiceName) {
+          break;
+        }
+
+        picked = pool[Math.floor(Math.random() * pool.length)];
+      }
+
+      lastVoiceName = picked.name;
+      return picked;
+    }
+
     function playRandomTypeVoice(character, options = {}) {
       if (!shouldPlayVoice(character, options)) {
         return;
       }
 
       if (
+        !audioUnlocked ||
         !audioContext ||
         audioContext.state !== "running" ||
         voiceBuffers.length === 0 ||
@@ -1772,20 +1990,38 @@
         return;
       }
 
+      const selected = pickWeightedVoice();
+
+      if (!selected) {
+        return;
+      }
+
       const source = audioContext.createBufferSource();
       const gain = audioContext.createGain();
-      const buffer = voiceBuffers[Math.floor(Math.random() * voiceBuffers.length)];
+      const panner = typeof audioContext.createStereoPanner === "function"
+        ? audioContext.createStereoPanner()
+        : null;
 
-      source.buffer = buffer;
+      source.buffer = selected.buffer;
       source.playbackRate.value = random(
         SETTINGS.voice.playbackRateMin,
         SETTINGS.voice.playbackRateMax
       );
 
-      gain.gain.value = SETTINGS.voice.volume * random(.88, 1.08);
+      gain.gain.value = SETTINGS.voice.volume * random(.90, 1.08);
 
       source.connect(gain);
-      gain.connect(audioContext.destination);
+
+      if (panner) {
+        panner.pan.value = random(
+          -SETTINGS.voice.reverb.panRange,
+          SETTINGS.voice.reverb.panRange
+        );
+        gain.connect(panner);
+        panner.connect(voiceMasterGain || audioContext.destination);
+      } else {
+        gain.connect(voiceMasterGain || audioContext.destination);
+      }
 
       activeVoiceCount += 1;
 
@@ -1793,6 +2029,10 @@
         activeVoiceCount = Math.max(0, activeVoiceCount - 1);
         source.disconnect();
         gain.disconnect();
+
+        if (panner) {
+          panner.disconnect();
+        }
       };
 
       source.start();
@@ -2204,13 +2444,14 @@
       }
 
       return new Promise((resolve) => {
-        function finish(event) {
+        async function finish(event) {
           event?.preventDefault();
 
           window.removeEventListener("pointerup", finish, true);
           window.removeEventListener("keydown", onKey, true);
 
-          initAudio();
+          /* 다음 대사가 시작되기 전에 보이스 파일 디코딩까지 확실히 끝냅니다. */
+          await unlockAudio();
           playTapSound();
 
           const guidePromise = guideHint.classList.contains("visible")
@@ -2273,8 +2514,8 @@
           button.type = "button";
           staticTrembleText(button, label);
 
-          button.addEventListener("click", () => {
-            initAudio();
+          button.addEventListener("click", async () => {
+            await unlockAudio();
             playTapSound();
             clearChoices();
             resolve(index);
@@ -2344,6 +2585,13 @@
     }
 
     async function influenceQuestionFlow() {
+      /*
+        이 문장부터 글자 보이스가 시작됩니다.
+        이전 대사들은 파일을 미리 준비만 하고 실제 재생은 하지 않습니다.
+      */
+      typeVoiceSceneEnabled = true;
+      await unlockAudio();
+
       const firstChoice = await showQuestion(STORY.questions.influence);
 
       if (firstChoice === 0) {
@@ -2733,7 +2981,7 @@
     seedBox.addEventListener("pointercancel", cancelHold);
     seedBox.addEventListener("lostpointercapture", cancelHold);
 
-    window.addEventListener("pointerdown", initAudio, { once: true });
+    window.addEventListener("pointerdown", () => { void unlockAudio(); }, { once: true });
     window.addEventListener("keydown", initAudio, { once: true });
 
     window.addEventListener("contextmenu", (event) => {
