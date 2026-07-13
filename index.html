@@ -23,7 +23,7 @@
       --choice-size: clamp(19px, 4.8vw, 33px);
       --small-size: clamp(14px, 3.45vw, 20px);
       --final-size: clamp(25px, 6.2vw, 43px);
-      --letter-space: .08em;
+      --letter-space: .105em;
       --box-size: clamp(62px, 17vw, 112px);
       --hold-progress: 0;
       --screen-x: 0px;
@@ -191,10 +191,12 @@
       z-index: 45;
       color: rgba(255, 255, 255, .76);
       font-size: var(--small-size);
-      letter-spacing: .17em;
+      letter-spacing: .2em;
       opacity: 0;
       transform: translate(-50%, -50%);
       pointer-events: none;
+      isolation: isolate;
+      will-change: transform, opacity, filter;
       text-shadow:
         -2px 0 7px rgba(255, 255, 255, .25),
         2px 0 7px rgba(255, 255, 255, .22),
@@ -202,35 +204,110 @@
         0 0 23px rgba(255, 255, 255, .52);
     }
 
+    /* 안내 문구의 잔상입니다. data-text에는 실제 안내 문구가 들어갑니다. */
+    #guide-hint::before,
+    #guide-hint::after {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      content: attr(data-text);
+      color: rgba(255, 255, 255, .42);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    #guide-hint::before {
+      transform: translate(-2px, 1px);
+      opacity: .23;
+      filter: blur(.45px);
+    }
+
+    #guide-hint::after {
+      transform: translate(2px, -1px);
+      opacity: .16;
+      filter: blur(.7px);
+    }
+
     #guide-hint.visible {
-      animation: guide-ghost 1.9s ease-in-out infinite;
+      /*
+        부드러운 곡선 대신 8개의 위치를 툭툭 밟는 모션입니다.
+        경로는 작은 8자형이라 기존 뫼비우스 느낌은 유지됩니다.
+      */
+      animation: guide-mobius-pixel 1.82s steps(1, end) infinite;
+    }
+
+    #guide-hint.visible::before {
+      animation: guide-echo-left .91s steps(1, end) infinite;
+    }
+
+    #guide-hint.visible::after {
+      animation: guide-echo-right 1.21s steps(1, end) infinite;
     }
 
     #guide-hint.hiding {
       opacity: 0 !important;
-      transition: opacity .8s ease;
+      transition: opacity .8s steps(5, end);
       animation: none;
     }
 
-    @keyframes guide-ghost {
-      0%,
-      100% {
-        opacity: .34;
-        transform: translate(calc(-50% - 3px), -50%);
-        filter: blur(.1px);
+    @keyframes guide-mobius-pixel {
+      0%, 100% {
+        opacity: .35;
+        transform: translate(calc(-50% - 4px), calc(-50% + 0px));
+        filter: blur(.25px) brightness(.9);
       }
 
-      35% {
-        opacity: .82;
-        transform: translate(calc(-50% + 2px), calc(-50% - 1px));
-        filter: blur(0);
+      12.5% {
+        opacity: .56;
+        transform: translate(calc(-50% - 2px), calc(-50% - 2px));
+        filter: blur(.08px) brightness(1.05);
       }
 
-      70% {
-        opacity: .48;
-        transform: translate(calc(-50% - 1px), calc(-50% + 1px));
-        filter: blur(.35px);
+      25% {
+        opacity: .79;
+        transform: translate(calc(-50% + 0px), calc(-50% + 0px));
+        filter: blur(0) brightness(1.14);
       }
+
+      37.5% {
+        opacity: .64;
+        transform: translate(calc(-50% + 2px), calc(-50% + 2px));
+        filter: blur(.18px) brightness(.98);
+      }
+
+      50% {
+        opacity: .42;
+        transform: translate(calc(-50% + 4px), calc(-50% + 0px));
+        filter: blur(.34px) brightness(.86);
+      }
+
+      62.5% {
+        opacity: .62;
+        transform: translate(calc(-50% + 2px), calc(-50% - 2px));
+        filter: blur(.12px) brightness(1.02);
+      }
+
+      75% {
+        opacity: .84;
+        transform: translate(calc(-50% + 0px), calc(-50% + 0px));
+        filter: blur(0) brightness(1.17);
+      }
+
+      87.5% {
+        opacity: .58;
+        transform: translate(calc(-50% - 2px), calc(-50% + 2px));
+        filter: blur(.2px) brightness(.96);
+      }
+    }
+
+    @keyframes guide-echo-left {
+      0%, 100% { transform: translate(-3px, 1px); opacity: .13; }
+      50% { transform: translate(-1px, -1px); opacity: .28; }
+    }
+
+    @keyframes guide-echo-right {
+      0%, 100% { transform: translate(3px, -1px); opacity: .1; }
+      50% { transform: translate(1px, 1px); opacity: .22; }
     }
 
     /* ------------------------------
@@ -1087,54 +1164,368 @@
   </section>
 
   <script>
-    /*
-      직접 그린 상자 파손 이미지를 같은 폴더에 넣을 때 사용하는 파일명입니다.
-      없는 파일은 자동으로 건너뛰며, 이미지가 하나도 없어도 CSS 상자로 정상 재생됩니다.
+    /* ======================================================================
+       A-WORLDS 수동 편집실
+       ======================================================================
 
-      world-box-00.png : 평상시
-      world-box-01.png : 미세 균열
-      world-box-02.png : 1단계 파손
-      world-box-03.png : 2단계 파손
-      world-box-04.png : 임계 직전
-      world-box-05.png : 폭발 직전
-    */
-    const BOX_FRAME_FILES = [
-      "./world-box-00.png",
-      "./world-box-01.png",
-      "./world-box-02.png",
-      "./world-box-03.png",
-      "./world-box-04.png",
-      "./world-box-05.png"
-    ];
+       앞으로 대사와 연출을 고칠 때는 우선 이 구역만 보면 됩니다.
 
-    const STORAGE_KEY = "a_world_completed_v8";
-    const HOLD_REQUIRED_MS = 3500;
-    const PAGE_GAP_MS = 2000;
-    const FINAL_BLACK_GAP_MS = 4000;
-    const WHISPER_AUDIO_SRC = "./do-you-know-what-you-have-done.mp3";
+       [대사 편집 규칙]
+       1) text 안의 \n       → 화면 줄바꿈입니다.
 
-    /*
-      타자 속도와 자동 유지 시간을 분리했습니다.
-      타자는 이전보다 약 25~30% 느리게, 자동 진행 대사의 완성 후 유지 시간은 짧게 유지합니다.
-    */
-    const SPEED = {
-      normal: 116,
-      normalRandom: 72,
-      slow: 218,
-      slowRandom: 92,
-      question: 158,
-      questionRandom: 82,
-      final: 330,
-      finalRandom: 100,
-      punctuation: 330,
-      lineBreak: 250,
-      space: 28
+       2) speed
+       → "normal", "slow", "question", "final", "dot" 중 하나를 씁니다.
+
+       3) pauseAfter: 500
+       → 해당 조각의 타이핑이 끝난 뒤 0.5초 멈춥니다.
+          숫자는 밀리초입니다. 1000 = 1초입니다.
+
+       4) advance: "tap"
+       → 사용자가 화면을 터치해야 다음 대사로 갑니다.
+
+       5) advance: "auto"
+       → 타이핑 완료 후 hold만큼 보여준 뒤 자동으로 넘어갑니다.
+
+       6) gap
+       → 페이드아웃이 끝난 뒤 다음 대사가 시작되기 전의 검은 화면 시간입니다.
+
+       7) voice: false
+       → 특정 대사만 글자 효과음을 끄고 싶을 때 세그먼트에 추가합니다.
+    ====================================================================== */
+
+    const SETTINGS = {
+      storageKey: "a_world_completed_v9",
+
+      timing: {
+        holdRequired: 3500,
+        pageGap: 2000,
+        finalBlackGap: 4000,
+        normalFade: 350,
+        riseFade: 630,
+        guideHide: 820
+      },
+
+      /* 타자 속도입니다. delay가 클수록 느립니다. */
+      typing: {
+        normal: {
+          delay: 116,
+          randomDelay: 72,
+          punctuationPause: 330,
+          lineBreakPause: 250,
+          spacePause: 28
+        },
+        slow: {
+          delay: 218,
+          randomDelay: 92,
+          punctuationPause: 330,
+          lineBreakPause: 250,
+          spacePause: 28
+        },
+        question: {
+          delay: 158,
+          randomDelay: 82,
+          punctuationPause: 420,
+          lineBreakPause: 250,
+          spacePause: 28
+        },
+        final: {
+          delay: 330,
+          randomDelay: 100,
+          punctuationPause: 600,
+          lineBreakPause: 250,
+          spacePause: 120
+        },
+        dot: {
+          delay: 620,
+          randomDelay: 80,
+          punctuationPause: 0,
+          lineBreakPause: 250,
+          spacePause: 28
+        }
+      },
+
+      autoHold: {
+        short: 1000,
+        medium: 2000,
+        long: 3000
+      },
+
+      /*
+        글자별 독립 떨림입니다.
+        이전 버전의 0.9px / 0.6deg에서 아주 살짝만 줄였습니다.
+      */
+      tremble: {
+        movePx: 0.78,
+        rotateDeg: 0.52,
+        durationMin: 0.42,
+        durationMax: 1.05,
+        delayMin: -0.9,
+        delayMax: 0
+      },
+
+      /*
+        글자 효과음 설정입니다.
+        실제 파일은 index.html 옆의 vocal_samples 폴더 안에 둡니다.
+      */
+      voice: {
+        enabled: true,
+        folder: "./vocal_samples/",
+        volume: 0.13,
+        playbackRateMin: 0.96,
+        playbackRateMax: 1.04,
+        maxConcurrent: 7,
+        playOnSpaces: false,
+        playOnPunctuation: true,
+        files: [
+        'demon_1.ogg',
+        'demon_2.ogg',
+        'demon_3.ogg',
+        'demon_4.ogg',
+        'female_light_1.ogg',
+        'female_light_2.ogg',
+        'female_light_3.ogg',
+        'female_light_4.ogg',
+        'female_standard_1.ogg',
+        'female_standard_2.ogg',
+        'female_standard_3.ogg',
+        'female_standard_4.ogg',
+        'male_deep_1.ogg',
+        'male_deep_2.ogg',
+        'male_deep_3.ogg',
+        'male_deep_4.ogg',
+        'male_standard_1.ogg',
+        'male_standard_2.ogg',
+        'male_standard_3.ogg',
+        'male_standard_4.ogg',
+        'quick_1.ogg',
+        'quick_2.ogg',
+        'quick_3.ogg',
+        'quick_4.ogg',
+        'robot_1.ogg',
+        'robot_2.ogg',
+        'robot_3.ogg',
+        'robot_4.ogg',
+        'whisper_1.ogg',
+        'whisper_2.ogg',
+        'whisper_3.ogg',
+        'whisper_4.ogg'
+        ]
+      },
+
+      whisperAudio: "./do-you-know-what-you-have-done.mp3",
+
+      boxFrames: [
+        "./world-box-00.png",
+        "./world-box-01.png",
+        "./world-box-02.png",
+        "./world-box-03.png",
+        "./world-box-04.png",
+        "./world-box-05.png"
+      ],
+
+      timelineDays: [
+        1, 2, 3, 4, 5, 6, 7,
+        14, 21, 49,
+        343, 2401, 16807, 117649, 823543, 5764801
+      ]
     };
 
-    const AUTO_HOLD = {
-      short: 1000,
-      medium: 2000,
-      long: 3000
+    /* ======================================================================
+       대사와 장면별 텀을 직접 수정하는 곳
+       ====================================================================== */
+    const STORY = {
+      intro: {
+        dots: {
+          segments: [
+            { text: ".", speed: "dot" },
+            { text: ".", speed: "dot" },
+            { text: ".", speed: "dot" }
+          ],
+          advance: "auto",
+          hold: 900,
+          fade: 450,
+          gap: 1500
+        },
+
+        everyone: {
+          segments: [
+            { text: "이제는", speed: "slow", pauseAfter: 260 },
+            {
+              text: " 모두가 자신만의\n세계 하나쯤은\n가지고 있습니다.",
+              speed: "normal"
+            }
+          ],
+          advance: "tap",
+          guide: "터치하여 넘기기",
+          gap: 2000
+        },
+
+        same: {
+          segments: [
+            { text: "당신도 마찬가지이죠.", speed: "normal" }
+          ],
+          advance: "tap",
+          gap: 2000
+        },
+
+        box: {
+          segments: [
+            { text: "앞에 작은 상자가 놓여있군요.", speed: "normal" }
+          ],
+          advance: "tap",
+          gap: 2000,
+          onStart: "revealForeshadowBox"
+        },
+
+        origin: {
+          segments: [
+            {
+              text: "때때로 모든 것은...\n단 하나의 점,",
+              speed: "normal",
+              pauseAfter: 500
+            },
+            { text: " 선,", speed: "normal", pauseAfter: 500 },
+            { text: " 네모에서\n시작되곤 합니다.", speed: "normal" }
+          ],
+          advance: "tap",
+          gap: 2000
+        },
+
+        influence: {
+          segments: [
+            { text: "당신이 지닌\n작고 소중한 영향력이,", speed: "normal" }
+          ],
+          advance: "auto",
+          hold: 1000,
+          gap: 700
+        },
+
+        dream: {
+          segments: [
+            { text: "더", speed: "normal", pauseAfter: 380 },
+            {
+              text: " 큰 꿈과 희망으로\n피어날 수 있음을 보여주기에\n충분한 녀석이 될 겁니다.",
+              speed: "normal"
+            }
+          ],
+          advance: "tap",
+          gap: 2000
+        }
+      },
+
+      questions: {
+        influence: {
+          segments: [
+            {
+              text: "당신의 영향력이 궁금하지 않으십니까?",
+              speed: "question"
+            }
+          ],
+          choices: ["고개를 끄덕인다", "고개를 젓는다"],
+          gap: 650
+        },
+
+        quit: {
+          segments: [
+            { text: "관두시겠습니까?", speed: "question" }
+          ],
+          choices: ["관둔다", "다시 돌아간다"],
+          gap: 650
+        },
+
+        make: {
+          choices: ["세계를 만든다."]
+        }
+      },
+
+      success: {
+        approval: {
+          segments: [
+            { text: "훌륭합니다.", speed: "question" }
+          ],
+          advance: "auto",
+          hold: 2000,
+          fade: 340,
+          gap: 900
+        },
+
+        instruction: {
+          segments: [
+            {
+              text: "당신은 언제든.",
+              speed: "normal",
+              pauseAfter: 1000
+            },
+            {
+              text: "\n상자에 손을 올릴 수 있습니다.",
+              speed: "normal"
+            }
+          ],
+          hold: 900,
+          riseFade: 630
+        }
+      },
+
+      created: {
+        first: {
+          segments: [
+            { text: "마침내...", speed: "normal", pauseAfter: 2000 },
+            { text: "\n손에 작은 세계를 쥐셨군요.", speed: "normal" }
+          ],
+          advance: "tap",
+          gap: 2000
+        },
+
+        warning: {
+          segments: [
+            { text: "절대로,", speed: "normal", pauseAfter: 2000 },
+            { text: " 절대로", speed: "normal", pauseAfter: 500 },
+            { text: " 놓지 마세요.", speed: "normal" }
+          ],
+          advance: "tap",
+          gap: 2000
+        },
+
+        artwork: {
+          segments: [
+            { text: "그것은 당신의 작품입니다.", speed: "normal" }
+          ],
+          advance: "auto",
+          hold: 3000,
+          gap: 900
+        },
+
+        timeStarts: {
+          segments: [
+            {
+              text: "시간이 흐르기 시작합니다.",
+              speed: "slow",
+              punctuationPause: 420
+            }
+          ],
+          timelineStartDelay: 620
+        }
+      },
+
+      final: {
+        text: "네가 무슨 짓을 했는지 알아?",
+        holdAfterTyping: 2400,
+        voice: true
+      },
+
+      cancel: {
+        prefix: ":(\n요청이 취소됨.\n",
+        phrases: [
+          "그것이 당신의 선택이라면, 잘 알겠습니다.",
+          "그 의사를 존중합니다."
+        ],
+        hold: 3000
+      },
+
+      revisit: [
+        "세계가 이미 구축되었습니다.",
+        "당신은 이미 세계에 들어와있습니다."
+      ]
     };
 
     const $ = (selector) => document.querySelector(selector);
@@ -1163,8 +1554,12 @@
     const revisitText = $("#revisit-text");
 
     const availableBoxFrames = new Map();
+    const voiceSampleBytes = new Map();
+    const voiceBuffers = [];
 
     let audioContext = null;
+    let voiceDecodePromise = null;
+    let activeVoiceCount = 0;
     let holdOscillator = null;
     let holdGain = null;
     let holdStart = 0;
@@ -1174,9 +1569,28 @@
     let firstGuideUsed = false;
     let longGuideUsed = false;
 
-    if (new URLSearchParams(location.search).get("reset") === "1") {
-      localStorage.removeItem(STORAGE_KEY);
-      history.replaceState(null, "", location.pathname);
+    const urlParams = new URLSearchParams(location.search);
+
+    /* ?reset=1은 1회 초기화, ?dev=1은 새로고침할 때마다 항상 처음부터 시작합니다. */
+    if (urlParams.get("reset") === "1" || urlParams.get("dev") === "1") {
+      localStorage.removeItem(SETTINGS.storageKey);
+
+      if (urlParams.get("reset") === "1") {
+        history.replaceState(null, "", location.pathname);
+      }
+    }
+
+    function getTypingStyle(name = "normal") {
+      return SETTINGS.typing[name] || SETTINGS.typing.normal;
+    }
+
+    function normalizeTypingOptions(options = {}) {
+      const preset = getTypingStyle(options.speed || "normal");
+
+      return {
+        ...preset,
+        ...options
+      };
     }
 
     function setScreenShake(x, y) {
@@ -1201,7 +1615,7 @@
     }
 
     function loadBoxFrames() {
-      BOX_FRAME_FILES.forEach((src, index) => {
+      SETTINGS.boxFrames.forEach((src, index) => {
         const image = new Image();
 
         image.onload = () => {
@@ -1250,26 +1664,138 @@
 
     function updateBoxFrame(progress) {
       const index = Math.min(
-        BOX_FRAME_FILES.length - 1,
-        Math.floor(progress * BOX_FRAME_FILES.length)
+        SETTINGS.boxFrames.length - 1,
+        Math.floor(progress * SETTINGS.boxFrames.length)
       );
 
       setBoxFrame(index);
     }
 
+    /* 페이지를 열자마자 작은 파일들을 미리 내려받습니다. 재생은 첫 터치 뒤에만 가능합니다. */
+    async function preloadVoiceSampleBytes() {
+      if (!SETTINGS.voice.enabled) {
+        return;
+      }
+
+      await Promise.allSettled(
+        SETTINGS.voice.files.map(async (filename) => {
+          const src = `${SETTINGS.voice.folder}${filename}`;
+          const response = await fetch(src, { cache: "force-cache" });
+
+          if (!response.ok) {
+            throw new Error(`voice sample load failed: ${src}`);
+          }
+
+          voiceSampleBytes.set(src, await response.arrayBuffer());
+        })
+      );
+    }
+
+    const voiceBytePreloadPromise = preloadVoiceSampleBytes();
+
     function initAudio() {
-      if (audioContext) {
-        audioContext.resume?.();
+      if (!audioContext) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
+        if (!AudioContextClass) {
+          return;
+        }
+
+        audioContext = new AudioContext();
+      }
+
+      audioContext.resume?.();
+      decodeVoiceSamples();
+    }
+
+    async function decodeVoiceSamples() {
+      if (!SETTINGS.voice.enabled || !audioContext) {
         return;
       }
 
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (voiceDecodePromise) {
+        return voiceDecodePromise;
+      }
 
-      if (!AudioContextClass) {
+      voiceDecodePromise = (async () => {
+        await voiceBytePreloadPromise;
+
+        const decoded = await Promise.allSettled(
+          Array.from(voiceSampleBytes.values()).map((bytes) =>
+            audioContext.decodeAudioData(bytes.slice(0))
+          )
+        );
+
+        voiceBuffers.length = 0;
+
+        for (const result of decoded) {
+          if (result.status === "fulfilled") {
+            voiceBuffers.push(result.value);
+          }
+        }
+      })();
+
+      return voiceDecodePromise;
+    }
+
+    function shouldPlayVoice(character, options = {}) {
+      if (!SETTINGS.voice.enabled || options.voice === false) {
+        return false;
+      }
+
+      if (character === "\n") {
+        return false;
+      }
+
+      if (/^\s$/.test(character)) {
+        return SETTINGS.voice.playOnSpaces;
+      }
+
+      if (/[.!?,]/.test(character)) {
+        return SETTINGS.voice.playOnPunctuation;
+      }
+
+      return true;
+    }
+
+    function playRandomTypeVoice(character, options = {}) {
+      if (!shouldPlayVoice(character, options)) {
         return;
       }
 
-      audioContext = new AudioContext();
+      if (
+        !audioContext ||
+        audioContext.state !== "running" ||
+        voiceBuffers.length === 0 ||
+        activeVoiceCount >= SETTINGS.voice.maxConcurrent
+      ) {
+        return;
+      }
+
+      const source = audioContext.createBufferSource();
+      const gain = audioContext.createGain();
+      const buffer = voiceBuffers[Math.floor(Math.random() * voiceBuffers.length)];
+
+      source.buffer = buffer;
+      source.playbackRate.value = random(
+        SETTINGS.voice.playbackRateMin,
+        SETTINGS.voice.playbackRateMax
+      );
+
+      gain.gain.value = SETTINGS.voice.volume * random(.88, 1.08);
+
+      source.connect(gain);
+      gain.connect(audioContext.destination);
+
+      activeVoiceCount += 1;
+
+      source.onended = () => {
+        activeVoiceCount = Math.max(0, activeVoiceCount - 1);
+        source.disconnect();
+        gain.disconnect();
+      };
+
+      source.start();
     }
 
     function playTapSound() {
@@ -1436,23 +1962,32 @@
     }
 
     function playWhisperVoice() {
-      const audio = new Audio(WHISPER_AUDIO_SRC);
+      const audio = new Audio(SETTINGS.whisperAudio);
       audio.volume = .82;
       audio.play().catch(() => {});
     }
 
     function configureTremble(span) {
-      span.style.setProperty("--x1", `${random(-.9, .9).toFixed(2)}px`);
-      span.style.setProperty("--y1", `${random(-.9, .9).toFixed(2)}px`);
-      span.style.setProperty("--x2", `${random(-.9, .9).toFixed(2)}px`);
-      span.style.setProperty("--y2", `${random(-.9, .9).toFixed(2)}px`);
-      span.style.setProperty("--x3", `${random(-.9, .9).toFixed(2)}px`);
-      span.style.setProperty("--y3", `${random(-.9, .9).toFixed(2)}px`);
-      span.style.setProperty("--r1", `${random(-.6, .6).toFixed(2)}deg`);
-      span.style.setProperty("--r2", `${random(-.6, .6).toFixed(2)}deg`);
-      span.style.setProperty("--r3", `${random(-.6, .6).toFixed(2)}deg`);
-      span.style.setProperty("--duration", `${random(.42, 1.05).toFixed(2)}s`);
-      span.style.setProperty("--delay", `${random(-.9, 0).toFixed(2)}s`);
+      const move = SETTINGS.tremble.movePx;
+      const rotate = SETTINGS.tremble.rotateDeg;
+
+      span.style.setProperty("--x1", `${random(-move, move).toFixed(2)}px`);
+      span.style.setProperty("--y1", `${random(-move, move).toFixed(2)}px`);
+      span.style.setProperty("--x2", `${random(-move, move).toFixed(2)}px`);
+      span.style.setProperty("--y2", `${random(-move, move).toFixed(2)}px`);
+      span.style.setProperty("--x3", `${random(-move, move).toFixed(2)}px`);
+      span.style.setProperty("--y3", `${random(-move, move).toFixed(2)}px`);
+      span.style.setProperty("--r1", `${random(-rotate, rotate).toFixed(2)}deg`);
+      span.style.setProperty("--r2", `${random(-rotate, rotate).toFixed(2)}deg`);
+      span.style.setProperty("--r3", `${random(-rotate, rotate).toFixed(2)}deg`);
+      span.style.setProperty(
+        "--duration",
+        `${random(SETTINGS.tremble.durationMin, SETTINGS.tremble.durationMax).toFixed(2)}s`
+      );
+      span.style.setProperty(
+        "--delay",
+        `${random(SETTINGS.tremble.delayMin, SETTINGS.tremble.delayMax).toFixed(2)}s`
+      );
     }
 
     function createCharacter(character, options = {}) {
@@ -1471,35 +2006,38 @@
       return span;
     }
 
-    function getDelay(character, options = {}) {
-      let delay = options.delay ?? SPEED.normal;
+    function getDelay(character, rawOptions = {}) {
+      const options = normalizeTypingOptions(rawOptions);
+      let delay = options.delay;
 
-      delay += random(0, options.randomDelay ?? SPEED.normalRandom);
+      delay += random(0, options.randomDelay);
 
       if (character === " ") {
-        delay += options.spacePause ?? SPEED.space;
+        delay += options.spacePause;
       }
 
       if (/[.!?,]/.test(character)) {
-        delay += options.punctuationPause ?? SPEED.punctuation;
+        delay += options.punctuationPause;
       }
 
       return delay;
     }
 
-    async function typeChunk(target, text, options = {}) {
+    async function typeChunk(target, text, rawOptions = {}) {
+      const options = normalizeTypingOptions(rawOptions);
       const units = text.split(/(\n| +)/g).filter((unit) => unit !== "");
 
       for (const unit of units) {
         if (unit === "\n") {
           target.appendChild(document.createElement("br"));
-          await sleep(options.lineBreakPause ?? SPEED.lineBreak);
+          await sleep(options.lineBreakPause);
           continue;
         }
 
         if (/^ +$/.test(unit)) {
           for (const space of unit) {
             target.appendChild(document.createTextNode("\u00A0"));
+            playRandomTypeVoice(space, options);
             await sleep(getDelay(space, options));
           }
           continue;
@@ -1511,12 +2049,13 @@
 
         for (const character of Array.from(unit)) {
           word.appendChild(createCharacter(character, options));
+          playRandomTypeVoice(character, options);
           await sleep(getDelay(character, options));
         }
       }
     }
 
-    async function typeSegments(target, segments, options = {}) {
+    async function typeSegments(target, segments, pageTyping = {}) {
       target.textContent = "";
 
       for (const segment of segments) {
@@ -1525,7 +2064,7 @@
         }
 
         await typeChunk(target, segment.text, {
-          ...options,
+          ...pageTyping,
           ...segment
         });
 
@@ -1535,7 +2074,8 @@
       }
     }
 
-    async function typeFixedLayoutFinal(target, text, options = {}) {
+    async function typeFixedLayoutFinal(target, text, rawOptions = {}) {
+      const options = normalizeTypingOptions({ speed: "final", ...rawOptions });
       target.textContent = "";
 
       const fragment = document.createDocumentFragment();
@@ -1562,23 +2102,24 @@
         revealQueue.push({ character, span });
       }
 
-      /* 전체 문장의 위치와 공백 폭을 먼저 확정합니다. */
+      /* 공백까지 포함한 문장 전체의 위치를 먼저 고정합니다. */
       target.appendChild(fragment);
       void target.offsetWidth;
 
       for (const item of revealQueue) {
         if (item.character === "\n") {
-          await sleep(options.lineBreakPause ?? SPEED.lineBreak);
+          await sleep(options.lineBreakPause);
           continue;
         }
 
         if (item.character === " ") {
-          /* 공백은 처음부터 자리를 차지하고, 타이핑 리듬만 유지합니다. */
-          await sleep(options.spaceDelay ?? 120);
+          playRandomTypeVoice(item.character, options);
+          await sleep(options.spacePause);
           continue;
         }
 
         item.span.classList.add("revealed");
+        playRandomTypeVoice(item.character, options);
         await sleep(getDelay(item.character, options));
       }
     }
@@ -1608,33 +2149,27 @@
     }
 
     function prepareTextLayer(element) {
-      /*
-        중요:
-        이전 버전은 opacity와 filter를 인라인 스타일로 1 / blur(0)에 고정해서
-        .fade-out 클래스가 붙어도 CSS 페이드가 덮어쓰이지 않는 문제가 있었습니다.
-        이제 인라인 값을 완전히 지우고 기본 CSS 상태로 되돌립니다.
-      */
       element.classList.remove("fade-out", "rise-away");
       element.style.removeProperty("opacity");
       element.style.removeProperty("filter");
       element.style.removeProperty("transform");
       element.style.removeProperty("transition");
-
-      /* 이전 페이드 상태 제거를 브라우저가 한 프레임 확실히 인식하도록 강제 계산 */
       void element.offsetWidth;
     }
 
     async function fadeOutText(element, options = {}) {
       const fadeClass = options.rise ? "rise-away" : "fade-out";
-      const duration = options.duration ?? (options.rise ? 630 : 350);
+      const duration = options.duration ?? (
+        options.rise
+          ? SETTINGS.timing.riseFade
+          : SETTINGS.timing.normalFade
+      );
 
-      /* 혹시 남아 있을 수 있는 인라인 값이 전환을 막지 않게 다시 한 번 정리 */
       element.style.removeProperty("opacity");
       element.style.removeProperty("filter");
       element.style.removeProperty("transform");
       element.style.removeProperty("transition");
 
-      /* 현재 보이는 상태를 먼저 확정한 다음 다음 프레임에 페이드 시작 */
       void element.offsetWidth;
       await new Promise((resolve) => requestAnimationFrame(resolve));
 
@@ -1648,6 +2183,7 @@
 
     function showGuide(text) {
       guideHint.textContent = text;
+      guideHint.dataset.text = text;
       guideHint.classList.remove("hiding", "visible");
       void guideHint.offsetWidth;
       guideHint.classList.add("visible");
@@ -1655,9 +2191,10 @@
 
     async function hideGuide() {
       guideHint.classList.add("hiding");
-      await sleep(820);
+      await sleep(SETTINGS.timing.guideHide);
       guideHint.classList.remove("visible", "hiding");
       guideHint.textContent = "";
+      guideHint.removeAttribute("data-text");
     }
 
     function waitForTap(options = {}) {
@@ -1673,6 +2210,7 @@
           window.removeEventListener("pointerup", finish, true);
           window.removeEventListener("keydown", onKey, true);
 
+          initAudio();
           playTapSound();
 
           const guidePromise = guideHint.classList.contains("visible")
@@ -1693,24 +2231,30 @@
       });
     }
 
-    async function showNarrationPage(segments, options = {}) {
+    const PAGE_HOOKS = {
+      revealForeshadowBox
+    };
+
+    async function showNarrationPage(page) {
       prepareTextLayer(narration);
 
-      options.onStart?.();
+      if (page.onStart && PAGE_HOOKS[page.onStart]) {
+        PAGE_HOOKS[page.onStart]();
+      }
 
-      await typeSegments(narration, segments, options.typing);
+      await typeSegments(narration, page.segments, page.typing);
 
-      if (options.advance === "auto") {
-        await sleep(options.autoWait ?? AUTO_HOLD.short);
+      if (page.advance === "auto") {
+        await sleep(page.hold ?? SETTINGS.autoHold.short);
       } else {
-        await waitForTap({ guide: options.guide });
+        await waitForTap({ guide: page.guide });
       }
 
       await fadeOutText(narration, {
-        duration: options.fadeDuration ?? 350
+        duration: page.fade ?? SETTINGS.timing.normalFade
       });
 
-      await sleep(options.gap ?? PAGE_GAP_MS);
+      await sleep(page.gap ?? SETTINGS.timing.pageGap);
     }
 
     function clearChoices() {
@@ -1730,6 +2274,7 @@
           staticTrembleText(button, label);
 
           button.addEventListener("click", () => {
+            initAudio();
             playTapSound();
             clearChoices();
             resolve(index);
@@ -1743,14 +2288,14 @@
       });
     }
 
-    async function showQuestion(segments, labels, options = {}) {
+    async function showQuestion(page) {
       prepareTextLayer(narration);
-      await typeSegments(narration, segments, options.typing);
+      await typeSegments(narration, page.segments, page.typing);
 
-      const result = await askChoice(labels);
+      const result = await askChoice(page.choices);
 
       await fadeOutText(narration, { duration: 210 });
-      await sleep(options.gap ?? 650);
+      await sleep(page.gap ?? 650);
 
       return result;
     }
@@ -1783,82 +2328,37 @@
     }
 
     async function successfulChoiceFlow() {
-      prepareTextLayer(narration);
-
-      await typeSegments(narration, [
-        {
-          text: "훌륭합니다.",
-          delay: SPEED.question,
-          randomDelay: SPEED.questionRandom
-        }
-      ]);
-
-      await sleep(AUTO_HOLD.medium);
-      await fadeOutText(narration, { duration: 340 });
-      await sleep(900);
+      await showNarrationPage(STORY.success.approval);
 
       prepareTextLayer(narration);
-
-      await typeSegments(narration, [
-        {
-          text: "당신은 언제든.",
-          delay: SPEED.normal,
-          randomDelay: SPEED.normalRandom,
-          pauseAfter: 1000
-        },
-        {
-          text: "\n상자에 손을 올릴 수 있습니다.",
-          delay: SPEED.normal,
-          randomDelay: SPEED.normalRandom
-        }
-      ]);
-
-      await sleep(900);
+      await typeSegments(narration, STORY.success.instruction.segments);
+      await sleep(STORY.success.instruction.hold);
 
       const boxPromise = activateBox();
       const textPromise = fadeOutText(narration, {
         rise: true,
-        duration: 630
+        duration: STORY.success.instruction.riseFade
       });
 
       await Promise.all([boxPromise, textPromise]);
     }
 
     async function influenceQuestionFlow() {
-      const firstChoice = await showQuestion(
-        [
-          {
-            text: "당신의 영향력이 궁금하지 않으십니까?",
-            delay: SPEED.question,
-            randomDelay: SPEED.questionRandom,
-            punctuationPause: 420
-          }
-        ],
-        ["고개를 끄덕인다", "고개를 젓는다"]
-      );
+      const firstChoice = await showQuestion(STORY.questions.influence);
 
       if (firstChoice === 0) {
         await successfulChoiceFlow();
         return;
       }
 
-      const quitChoice = await showQuestion(
-        [
-          {
-            text: "관두시겠습니까?",
-            delay: SPEED.question,
-            randomDelay: SPEED.questionRandom
-          }
-        ],
-        ["관둔다", "다시 돌아간다"]
-      );
+      const quitChoice = await showQuestion(STORY.questions.quit);
 
       if (quitChoice === 0) {
         await runCancelRoute();
         return;
       }
 
-      const makeChoice = await askChoice(["세계를 만든다."]);
+      const makeChoice = await askChoice(STORY.questions.make.choices);
 
       if (makeChoice === 0) {
         await successfulChoiceFlow();
@@ -1866,125 +2366,20 @@
     }
 
     async function startIntro() {
-      if (localStorage.getItem(STORAGE_KEY) === "1") {
+      if (localStorage.getItem(SETTINGS.storageKey) === "1") {
         showRevisit();
         return;
       }
 
       await sleep(800);
 
-      /* 1. 점 세 개는 터치 없이 자동 진행 */
-      prepareTextLayer(narration);
-
-      await typeSegments(narration, [
-        { text: ".", delay: 620, randomDelay: 80, punctuationPause: 0 },
-        { text: ".", delay: 620, randomDelay: 80, punctuationPause: 0 },
-        { text: ".", delay: 620, randomDelay: 80, punctuationPause: 0 }
-      ]);
-
-      await sleep(900);
-      await fadeOutText(narration, { duration: 450 });
-      await sleep(1500);
-
-      /* 2. 이제는 부분만 느리고, 이후 정상 속도 */
-      await showNarrationPage(
-        [
-          {
-            text: "이제는",
-            delay: SPEED.slow,
-            randomDelay: SPEED.slowRandom,
-            pauseAfter: 260
-          },
-          {
-            text: " 모두가 자신만의\n세계 하나쯤은\n가지고 있습니다.",
-            delay: SPEED.normal,
-            randomDelay: SPEED.normalRandom
-          }
-        ],
-        {
-          guide: "터치하여 넘기기",
-          gap: PAGE_GAP_MS
-        }
-      );
-
-      await showNarrationPage(
-        [
-          {
-            text: "당신도 마찬가지이죠.",
-            delay: SPEED.normal,
-            randomDelay: SPEED.normalRandom
-          }
-        ]
-      );
-
-      await showNarrationPage(
-        [
-          {
-            text: "앞에 작은 상자가 놓여있군요.",
-            delay: SPEED.normal,
-            randomDelay: SPEED.normalRandom
-          }
-        ],
-        {
-          onStart: revealForeshadowBox
-        }
-      );
-
-      await showNarrationPage(
-        [
-          {
-            text: "때때로 모든 것은...\n단 하나의 점,",
-            delay: SPEED.normal,
-            randomDelay: SPEED.normalRandom,
-            pauseAfter: 500
-          },
-          {
-            text: " 선,",
-            delay: SPEED.normal,
-            randomDelay: SPEED.normalRandom,
-            pauseAfter: 500
-          },
-          {
-            text: " 네모에서\n시작되곤 합니다.",
-            delay: SPEED.normal,
-            randomDelay: SPEED.normalRandom
-          }
-        ]
-      );
-
-      await showNarrationPage(
-        [
-          {
-            text: "당신이 지닌\n작고 소중한 영향력이,",
-            delay: SPEED.normal,
-            randomDelay: SPEED.normalRandom
-          }
-        ],
-        {
-          advance: "auto",
-          autoWait: AUTO_HOLD.short,
-          gap: 700
-        }
-      );
-
-      await showNarrationPage(
-        [
-          {
-            text: "더",
-            delay: SPEED.normal,
-            randomDelay: SPEED.normalRandom,
-            pauseAfter: 380
-          },
-          {
-            text: " 큰 꿈과 희망으로\n피어날 수 있음을 보여주기에\n충분한 녀석이 될 겁니다.",
-            delay: SPEED.normal,
-            randomDelay: SPEED.normalRandom
-          }
-        ],
-        {
-          gap: PAGE_GAP_MS
-        }
-      );
+      await showNarrationPage(STORY.intro.dots);
+      await showNarrationPage(STORY.intro.everyone);
+      await showNarrationPage(STORY.intro.same);
+      await showNarrationPage(STORY.intro.box);
+      await showNarrationPage(STORY.intro.origin);
+      await showNarrationPage(STORY.intro.influence);
+      await showNarrationPage(STORY.intro.dream);
 
       await influenceQuestionFlow();
     }
@@ -2013,7 +2408,7 @@
       }
 
       const elapsed = now - holdStart;
-      const progress = Math.min(elapsed / HOLD_REQUIRED_MS, 1);
+      const progress = Math.min(elapsed / SETTINGS.timing.holdRequired, 1);
 
       setHoldProgress(progress);
       updateHoldSound(progress);
@@ -2073,7 +2468,6 @@
       clearShake();
       setHoldProgress(1);
 
-      /* 임계점에서 0.2초 정적 */
       await sleep(200);
       await explodeWorld();
     }
@@ -2126,22 +2520,21 @@
       await revealCreatedWorld();
     }
 
-    async function showCreatedPage(segments, options = {}) {
+    async function showCreatedPage(page) {
       prepareTextLayer(createdText);
-      await typeSegments(createdText, segments, options.typing);
+      await typeSegments(createdText, page.segments, page.typing);
 
-      if (options.advance === "auto") {
-        await sleep(options.autoWait ?? AUTO_HOLD.short);
+      if (page.advance === "auto") {
+        await sleep(page.hold ?? SETTINGS.autoHold.short);
       } else {
         await waitForTap();
       }
 
       await fadeOutText(createdText, {
-        duration: options.fadeDuration ?? 350
+        duration: page.fade ?? SETTINGS.timing.normalFade
       });
 
-      /* 특수 지정이 없는 모든 생성 이후 대사도 다음 출력 전 2초 유지 */
-      await sleep(options.gap ?? PAGE_GAP_MS);
+      await sleep(page.gap ?? SETTINGS.timing.pageGap);
     }
 
     async function revealCreatedWorld() {
@@ -2154,54 +2547,9 @@
       whiteout.classList.remove("active", "release");
       particleLayer.innerHTML = "";
 
-      await showCreatedPage([
-        {
-          text: "마침내...",
-          delay: SPEED.normal,
-          randomDelay: SPEED.normalRandom,
-          pauseAfter: 2000
-        },
-        {
-          text: "\n손에 작은 세계를 쥐셨군요.",
-          delay: SPEED.normal,
-          randomDelay: SPEED.normalRandom
-        }
-      ]);
-
-      await showCreatedPage([
-        {
-          text: "절대로,",
-          delay: SPEED.normal,
-          randomDelay: SPEED.normalRandom,
-          pauseAfter: 2000
-        },
-        {
-          text: " 절대로",
-          delay: SPEED.normal,
-          randomDelay: SPEED.normalRandom,
-          pauseAfter: 500
-        },
-        {
-          text: " 놓지 마세요.",
-          delay: SPEED.normal,
-          randomDelay: SPEED.normalRandom
-        }
-      ]);
-
-      await showCreatedPage(
-        [
-          {
-            text: "그것은 당신의 작품입니다.",
-            delay: SPEED.normal,
-            randomDelay: SPEED.normalRandom
-          }
-        ],
-        {
-          advance: "auto",
-          autoWait: AUTO_HOLD.long,
-          gap: 900
-        }
-      );
+      await showCreatedPage(STORY.created.first);
+      await showCreatedPage(STORY.created.warning);
+      await showCreatedPage(STORY.created.artwork);
 
       await runTimeFlow();
     }
@@ -2225,14 +2573,8 @@
       timelineFeed.innerHTML = "";
       timelineWindow.classList.add("visible");
 
-      const days = [
-        1, 2, 3, 4, 5, 6, 7,
-        14, 21, 49,
-        343, 2401, 16807, 117649, 823543, 5764801
-      ];
-
-      for (let index = 0; index < days.length; index += 1) {
-        appendDayLine(`DAY ${days[index]}`);
+      for (let index = 0; index < SETTINGS.timelineDays.length; index += 1) {
+        appendDayLine(`DAY ${SETTINGS.timelineDays[index]}`);
 
         const delay = Math.max(78, 430 - index * 25);
         await sleep(delay);
@@ -2245,16 +2587,12 @@
     async function runTimeFlow() {
       prepareTextLayer(createdText);
 
-      const typingPromise = typeSegments(createdText, [
-        {
-          text: "시간이 흐르기 시작합니다.",
-          delay: SPEED.slow,
-          randomDelay: SPEED.slowRandom,
-          punctuationPause: 420
-        }
-      ]);
+      const typingPromise = typeSegments(
+        createdText,
+        STORY.created.timeStarts.segments
+      );
 
-      await sleep(620);
+      await sleep(STORY.created.timeStarts.timelineStartDelay);
       const timelinePromise = runTimelineFeed();
 
       await Promise.all([typingPromise, timelinePromise]);
@@ -2296,7 +2634,6 @@
     async function hardCutToFinal() {
       playHardCutSound();
 
-      /* 페이드 없이 한 프레임에 검정으로 끊김 */
       hardBlack.classList.add("active");
       glitchOverlay.classList.remove("active");
       createdScene.hidden = true;
@@ -2305,30 +2642,27 @@
       timelineFeed.innerHTML = "";
       createdText.textContent = "";
 
-      await sleep(FINAL_BLACK_GAP_MS);
+      await sleep(SETTINGS.timing.finalBlackGap);
 
-      /* 검정 위에서 최종 문장만 아주 느리게 타이핑 */
       hardBlack.classList.remove("active");
       prepareTextLayer(finalText);
       playWhisperVoice();
 
       await typeFixedLayoutFinal(
         finalText,
-        "네가 무슨 짓을 했는지 알아?",
+        STORY.final.text,
         {
-          delay: SPEED.final,
-          randomDelay: SPEED.finalRandom,
-          punctuationPause: 600,
-          spaceDelay: 120
+          speed: "final",
+          voice: STORY.final.voice
         }
       );
 
-      await sleep(2400);
+      await sleep(STORY.final.holdAfterTyping);
       tvLine.classList.add("active");
       await sleep(620);
 
       finalText.textContent = "";
-      localStorage.setItem(STORAGE_KEY, "1");
+      localStorage.setItem(SETTINGS.storageKey, "1");
       enterDeadState();
     }
 
@@ -2345,25 +2679,23 @@
 
       await sleep(700);
 
-      const phrases = [
-        "그것이 당신의 선택이라면, 잘 알겠습니다.",
-        "그 의사를 존중합니다."
+      const phrase = STORY.cancel.phrases[
+        Math.floor(Math.random() * STORY.cancel.phrases.length)
       ];
-
-      const phrase = phrases[Math.floor(Math.random() * phrases.length)];
 
       prepareTextLayer(cancelText);
 
       await typeSegments(cancelText, [
         {
-          text: `:(\n요청이 취소됨.\n${phrase}`,
-          delay: SPEED.normal,
-          randomDelay: SPEED.normalRandom
+          text: `${STORY.cancel.prefix}${phrase}`,
+          speed: "normal"
         }
       ]);
 
-      await sleep(AUTO_HOLD.long);
-      await fadeOutText(cancelText, { duration: 350 });
+      await sleep(STORY.cancel.hold);
+      await fadeOutText(cancelText, {
+        duration: SETTINGS.timing.normalFade
+      });
       enterDeadState();
     }
 
@@ -2390,13 +2722,9 @@
 
     function showRevisit() {
       document.body.classList.add("dead");
-
-      const phrases = [
-        "세계가 이미 구축되었습니다.",
-        "당신은 이미 세계에 들어와있습니다."
+      revisitText.textContent = STORY.revisit[
+        Math.floor(Math.random() * STORY.revisit.length)
       ];
-
-      revisitText.textContent = phrases[Math.floor(Math.random() * phrases.length)];
       revisit.classList.add("active");
     }
 
@@ -2414,7 +2742,7 @@
 
     window.addEventListener("beforeunload", () => {
       if (completed && deadOverlay.classList.contains("active")) {
-        localStorage.setItem(STORAGE_KEY, "1");
+        localStorage.setItem(SETTINGS.storageKey, "1");
       }
     });
 
