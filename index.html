@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>a world</title>
+  <!-- build: day-error-who-sfx-v1 -->
 
   <style>
     @font-face {
@@ -912,35 +913,243 @@
 
     #glitch-overlay {
       position: fixed;
-      inset: 0;
+      inset: -4%;
       z-index: 65;
       opacity: 0;
+      overflow: hidden;
       pointer-events: none;
       background:
-        repeating-linear-gradient(0deg, rgba(255, 255, 255, .07) 0 1px, transparent 1px 5px),
-        linear-gradient(90deg, transparent 0 42%, rgba(255, 255, 255, .08) 43% 46%, transparent 47%);
+        repeating-linear-gradient(
+          0deg,
+          rgba(255, 255, 255, .09) 0 1px,
+          transparent 1px 4px
+        ),
+        linear-gradient(
+          90deg,
+          transparent 0 18%,
+          rgba(255, 255, 255, .08) 19% 23%,
+          transparent 24% 61%,
+          rgba(255, 255, 255, .11) 62% 67%,
+          transparent 68%
+        );
       mix-blend-mode: screen;
+      isolation: isolate;
+    }
+
+    #glitch-overlay::before,
+    #glitch-overlay::after {
+      position: absolute;
+      inset: 0;
+      content: "";
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* 수평으로 잘린 화면 조각 */
+    #glitch-overlay::before {
+      background:
+        linear-gradient(
+          0deg,
+          transparent 0 10%,
+          rgba(255, 255, 255, .22) 10% 13%,
+          transparent 13% 31%,
+          rgba(255, 255, 255, .14) 31% 39%,
+          transparent 39% 68%,
+          rgba(255, 255, 255, .18) 68% 73%,
+          transparent 73%
+        );
+      mix-blend-mode: difference;
+    }
+
+    /* 오래된 화면의 굵은 주사선과 순간 백색 노이즈 */
+    #glitch-overlay::after {
+      background:
+        repeating-linear-gradient(
+          90deg,
+          transparent 0 7px,
+          rgba(255, 255, 255, .06) 7px 9px
+        ),
+        radial-gradient(circle at 54% 46%, rgba(255, 255, 255, .18), transparent 45%);
+      filter: contrast(2.8);
     }
 
     #glitch-overlay.active {
-      opacity: .42;
-      animation: screen-glitch .09s steps(2, end) infinite;
+      opacity: .48;
+      animation: screen-glitch .095s steps(2, end) infinite;
+    }
+
+    #glitch-overlay.active::before {
+      opacity: .44;
+      animation: glitch-slices .17s steps(3, end) infinite;
+    }
+
+    #glitch-overlay.active::after {
+      opacity: .24;
+      animation: glitch-bands .12s steps(2, end) infinite;
+    }
+
+    #glitch-overlay.violent {
+      opacity: .82;
+      background-color: rgba(255, 255, 255, .045);
+      animation-duration: .062s;
+    }
+
+    #glitch-overlay.violent::before {
+      opacity: .86;
+      animation-duration: .085s;
+    }
+
+    #glitch-overlay.violent::after {
+      opacity: .58;
+      animation-duration: .07s;
+    }
+
+    #glitch-overlay.terminal {
+      opacity: 1;
+      filter: contrast(3.2) brightness(1.35);
+      animation-duration: .038s;
+    }
+
+    #app.erroring {
+      animation: error-frame .105s steps(2, end) infinite;
+    }
+
+    #created-scene.erroring #world-cube {
+      animation: world-error-spin .085s steps(2, end) infinite;
+    }
+
+    #timeline-window.erroring {
+      border-left-color: rgba(255, 255, 255, .78);
+      box-shadow:
+        -10px 0 26px rgba(255, 255, 255, .12),
+        inset 0 0 22px rgba(255, 255, 255, .08);
+      animation: timeline-error-warp .11s steps(2, end) infinite;
+    }
+
+    #whiteout.error-flash {
+      opacity: 0;
+      animation: error-white-flash .19s steps(2, end) 3;
     }
 
     @keyframes screen-glitch {
       0% {
-        transform: translateX(0) scaleY(1);
-        filter: contrast(1);
+        transform: translate(0, 0) scale(1);
+        filter: contrast(1.2) brightness(1);
+      }
+
+      25% {
+        transform: translate(-11px, 2px) scaleX(1.018);
+        filter: contrast(2.4) brightness(1.18);
       }
 
       50% {
-        transform: translateX(-7px) scaleY(1.02);
-        filter: contrast(2.2);
+        transform: translate(8px, -3px) scaleY(1.035);
+        filter: contrast(3.1) brightness(.78);
+      }
+
+      75% {
+        transform: translate(-4px, 4px) scaleX(.985);
+        filter: contrast(2.7) brightness(1.34);
       }
 
       100% {
-        transform: translateX(5px) scaleY(.98);
-        filter: contrast(1.4);
+        transform: translate(12px, -1px) scaleY(.972);
+        filter: contrast(1.7) brightness(.92);
+      }
+    }
+
+    @keyframes glitch-slices {
+      0% {
+        clip-path: inset(4% 0 82% 0);
+        transform: translateX(-18px);
+      }
+
+      33% {
+        clip-path: inset(37% 0 42% 0);
+        transform: translateX(22px);
+      }
+
+      66% {
+        clip-path: inset(71% 0 9% 0);
+        transform: translateX(-9px);
+      }
+
+      100% {
+        clip-path: inset(15% 0 63% 0);
+        transform: translateX(15px);
+      }
+    }
+
+    @keyframes glitch-bands {
+      0% {
+        transform: translateY(-8px) scaleX(1.02);
+        opacity: .2;
+      }
+
+      50% {
+        transform: translateY(7px) scaleX(.98);
+        opacity: .82;
+      }
+
+      100% {
+        transform: translateY(-2px) scaleX(1.035);
+        opacity: .36;
+      }
+    }
+
+    @keyframes error-frame {
+      0% {
+        filter: contrast(1) brightness(1);
+      }
+
+      50% {
+        filter: contrast(1.65) brightness(.83);
+      }
+
+      100% {
+        filter: contrast(2.1) brightness(1.18);
+      }
+    }
+
+    @keyframes world-error-spin {
+      0% {
+        transform: translate(-50%, -50%) rotateX(58deg) rotateZ(0deg);
+        filter: drop-shadow(-7px 0 3px rgba(255, 255, 255, .62));
+      }
+
+      50% {
+        transform: translate(calc(-50% - 9px), calc(-50% + 4px)) rotateX(72deg) rotateZ(41deg) scale(1.08);
+        filter: drop-shadow(9px 0 6px rgba(255, 255, 255, .9));
+      }
+
+      100% {
+        transform: translate(calc(-50% + 7px), calc(-50% - 5px)) rotateX(42deg) rotateZ(97deg) scale(.92);
+        filter: drop-shadow(-3px 0 2px rgba(255, 255, 255, .42));
+      }
+    }
+
+    @keyframes timeline-error-warp {
+      0% {
+        transform: translate(0, 0) skewX(0deg);
+      }
+
+      50% {
+        transform: translate(-8px, 2px) skewX(-2deg);
+      }
+
+      100% {
+        transform: translate(6px, -3px) skewX(1.4deg);
+      }
+    }
+
+    @keyframes error-white-flash {
+      0%,
+      100% {
+        opacity: 0;
+      }
+
+      50% {
+        opacity: .72;
       }
     }
 
@@ -1327,6 +1536,52 @@
         ]
       },
 
+      /*
+        클릭/에러 전용 효과음입니다.
+        두 파일은 vocal_samples 폴더 안에 둡니다.
+
+        Who.wav : 대사를 넘기거나 선택지를 누를 때 재생
+        ___.wav : DAY 로그가 에러로 무너지는 첫 순간에 1회 재생
+      */
+      sfx: {
+        folder: "./vocal_samples/",
+        tap: {
+          file: "Who.wav",
+          volume: 0.68,
+          playbackRate: 1.0,
+          stopPrevious: true
+        },
+        errorMessage: {
+          file: "___.wav",
+          volume: 0.88,
+          playbackRate: 1.0
+        }
+      },
+
+      /*
+        DAY 흐름을 직접 조절하는 구역입니다.
+        minDelay가 작을수록 뒤쪽 로그가 더 빠르게 쏟아집니다.
+        endHold는 마지막 정상 DAY가 표시된 뒤 에러가 시작되기 전의 짧은 숨입니다.
+      */
+      timeline: {
+        baseDelay: 430,
+        acceleration: 18,
+        minDelay: 150,
+        endHold: 850
+      },
+
+      /*
+        에러 장면의 세기와 길이입니다.
+        iterations를 늘리면 에러가 더 오래 지속됩니다.
+      */
+      errorScene: {
+        iterations: 30,
+        violentAt: 9,
+        terminalAt: 22,
+        baseDelay: 112,
+        minDelay: 48
+      },
+
       whisperAudio: "./do-you-know-what-you-have-done.mp3",
 
       boxFrames: [
@@ -1341,7 +1596,19 @@
       timelineDays: [
         1, 2, 3, 4, 5, 6, 7,
         14, 21, 49,
-        343, 2401, 16807, 117649, 823543, 5764801
+        343, 2401, 16807, 117649, 823543, 5764801,
+        "40353607",
+        "282475249",
+        "1977326743",
+        "13841287201",
+        "96889010407",
+        "678223072849",
+        "4747561509943",
+        "33232930569601",
+        "232630513987207",
+        "1628413597910449",
+        "11398895185373143",
+        "79792266297612001"
       ]
     };
 
@@ -1547,6 +1814,7 @@
     const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
     const random = (min, max) => Math.random() * (max - min) + min;
 
+    const app = $("#app");
     const narration = $("#narration");
     const guideHint = $("#guide-hint");
     const choicePanel = $("#choice-panel");
@@ -1570,6 +1838,8 @@
 
     const availableBoxFrames = new Map();
     const voiceSampleBytes = new Map();
+    const sfxSampleBytes = new Map();
+    const sfxBuffers = new Map();
 
     /*
       { name, group, buffer } 형식으로 보관합니다.
@@ -1585,10 +1855,13 @@
     let voiceConvolver = null;
     let voiceCompressor = null;
     let voiceDecodePromise = null;
+    let sfxDecodePromise = null;
     let audioReadyPromise = null;
     let audioUnlocked = false;
     let voiceLoadFinished = false;
+    let sfxLoadFinished = false;
     let activeVoiceCount = 0;
+    let activeTapSource = null;
 
     /* 질문 장면 전까지는 false이며, influenceQuestionFlow에서 true로 전환됩니다. */
     let typeVoiceSceneEnabled = false;
@@ -1739,6 +2012,40 @@
     const voiceBytePreloadPromise = preloadVoiceSampleBytes();
 
     /*
+      클릭 효과음과 에러 효과음도 페이지가 열리자마자 파일 데이터만 미리 받습니다.
+      실제 디코딩과 재생은 첫 사용자 터치 이후에 시작됩니다.
+    */
+    async function preloadSfxSampleBytes() {
+      const entries = [
+        ["tap", SETTINGS.sfx.tap.file],
+        ["errorMessage", SETTINGS.sfx.errorMessage.file]
+      ];
+
+      const results = await Promise.allSettled(
+        entries.map(async ([key, filename]) => {
+          const src = `${SETTINGS.sfx.folder}${filename}`;
+          const response = await fetch(src, { cache: "default" });
+
+          if (!response.ok) {
+            throw new Error(`sfx load failed: ${src} (${response.status})`);
+          }
+
+          sfxSampleBytes.set(key, await response.arrayBuffer());
+        })
+      );
+
+      sfxLoadFinished = true;
+
+      const failedCount = results.filter((result) => result.status === "rejected").length;
+
+      if (failedCount > 0) {
+        console.warn(`[A-WORLDS] 전용 효과음 ${failedCount}개를 불러오지 못했습니다.`);
+      }
+    }
+
+    const sfxBytePreloadPromise = preloadSfxSampleBytes();
+
+    /*
       외부 리버브 파일 없이 브라우저 안에서 잔향 데이터를 생성합니다.
       좌우 채널을 서로 다르게 만들어 좁은 스피커에서도 약간의 깊이가 느껴집니다.
     */
@@ -1869,6 +2176,55 @@
       return success;
     }
 
+    async function decodeSfxSamples() {
+      if (!audioContext) {
+        return false;
+      }
+
+      if (sfxBuffers.size > 0) {
+        return true;
+      }
+
+      if (sfxDecodePromise) {
+        return sfxDecodePromise;
+      }
+
+      sfxDecodePromise = (async () => {
+        await sfxBytePreloadPromise;
+
+        const entries = Array.from(sfxSampleBytes.entries());
+        const decoded = await Promise.allSettled(
+          entries.map(async ([key, bytes]) => {
+            const buffer = await audioContext.decodeAudioData(bytes.slice(0));
+            return [key, buffer];
+          })
+        );
+
+        sfxBuffers.clear();
+
+        for (const result of decoded) {
+          if (result.status === "fulfilled") {
+            const [key, buffer] = result.value;
+            sfxBuffers.set(key, buffer);
+          }
+        }
+
+        if (sfxBuffers.size === 0) {
+          console.warn("[A-WORLDS] 전용 효과음 디코딩 결과가 0개입니다.");
+        }
+
+        return sfxBuffers.size > 0;
+      })();
+
+      const success = await sfxDecodePromise;
+
+      if (!success) {
+        sfxDecodePromise = null;
+      }
+
+      return success;
+    }
+
     async function unlockAudio() {
       if (audioReadyPromise) {
         return audioReadyPromise;
@@ -1892,14 +2248,21 @@
             return false;
           }
 
-          await decodeVoiceSamples();
-          return true;
+          await Promise.all([
+            decodeVoiceSamples(),
+            decodeSfxSamples()
+          ]);
+
+          return voiceBuffers.length > 0 || sfxBuffers.size > 0;
         } catch (error) {
           console.warn("[A-WORLDS] 오디오 활성화 실패", error);
           return false;
         } finally {
           /* 실패한 경우 다음 사용자 터치에서 재시도할 수 있도록 잠금을 풉니다. */
-          if (!audioUnlocked || voiceBuffers.length === 0) {
+          if (
+            !audioUnlocked ||
+            (voiceBuffers.length === 0 && sfxBuffers.size === 0)
+          ) {
             audioReadyPromise = null;
           }
         }
@@ -2038,29 +2401,71 @@
       source.start();
     }
 
-    function playTapSound() {
-      initAudio();
-
-      if (!audioContext) {
+    function playSfxSample(key, options = {}) {
+      if (
+        !audioUnlocked ||
+        !audioContext ||
+        audioContext.state !== "running"
+      ) {
         return;
       }
 
-      const oscillator = audioContext.createOscillator();
+      const buffer = sfxBuffers.get(key);
+
+      if (!buffer) {
+        console.warn(`[A-WORLDS] 효과음 버퍼가 없습니다: ${key}`);
+        return;
+      }
+
+      if (options.stopPrevious && activeTapSource) {
+        try {
+          activeTapSource.stop();
+        } catch (error) {}
+
+        activeTapSource = null;
+      }
+
+      const source = audioContext.createBufferSource();
       const gain = audioContext.createGain();
-      const now = audioContext.currentTime;
 
-      oscillator.type = "triangle";
-      oscillator.frequency.setValueAtTime(160, now);
-      oscillator.frequency.exponentialRampToValueAtTime(76, now + .09);
+      source.buffer = buffer;
+      source.playbackRate.value = options.playbackRate ?? 1;
+      gain.gain.value = options.volume ?? 1;
 
-      gain.gain.setValueAtTime(.0001, now);
-      gain.gain.linearRampToValueAtTime(.034, now + .008);
-      gain.gain.exponentialRampToValueAtTime(.0001, now + .13);
-
-      oscillator.connect(gain);
+      source.connect(gain);
       gain.connect(audioContext.destination);
-      oscillator.start(now);
-      oscillator.stop(now + .15);
+
+      if (options.stopPrevious) {
+        activeTapSource = source;
+      }
+
+      source.onended = () => {
+        if (activeTapSource === source) {
+          activeTapSource = null;
+        }
+
+        source.disconnect();
+        gain.disconnect();
+      };
+
+      source.start();
+    }
+
+    /* 모든 대사 넘김과 선택 클릭은 Who.wav로 통일합니다. */
+    function playTapSound() {
+      playSfxSample("tap", {
+        volume: SETTINGS.sfx.tap.volume,
+        playbackRate: SETTINGS.sfx.tap.playbackRate,
+        stopPrevious: SETTINGS.sfx.tap.stopPrevious
+      });
+    }
+
+    /* DAY 에러 메시지가 처음 나타나는 순간 ___.wav를 정확히 한 번 재생합니다. */
+    function playErrorMessageSound() {
+      playSfxSample("errorMessage", {
+        volume: SETTINGS.sfx.errorMessage.volume,
+        playbackRate: SETTINGS.sfx.errorMessage.playbackRate
+      });
     }
 
     function startHoldSound() {
@@ -2824,11 +3229,15 @@
       for (let index = 0; index < SETTINGS.timelineDays.length; index += 1) {
         appendDayLine(`DAY ${SETTINGS.timelineDays[index]}`);
 
-        const delay = Math.max(78, 430 - index * 25);
+        const delay = Math.max(
+          SETTINGS.timeline.minDelay,
+          SETTINGS.timeline.baseDelay - index * SETTINGS.timeline.acceleration
+        );
+
         await sleep(delay);
       }
 
-      await sleep(420);
+      await sleep(SETTINGS.timeline.endHold);
       await runTimelineError();
     }
 
@@ -2848,6 +3257,10 @@
 
     async function runTimelineError() {
       playErrorSound();
+
+      app.classList.add("erroring");
+      createdScene.classList.add("erroring");
+      timelineWindow.classList.add("erroring");
       glitchOverlay.classList.add("active");
 
       const fragments = [
@@ -2858,11 +3271,30 @@
         "observer detected",
         "choice registered",
         "interference confirmed",
-        "██████████"
+        "WORLD STATE: UNSTABLE",
+        "SEQUENCE CORRUPTED",
+        "██████████████"
       ];
 
-      for (let index = 0; index < 18; index += 1) {
-        const amount = 1 + Math.floor(random(1, 4));
+      /*
+        첫 번째 오류 메시지가 찍히는 바로 이 순간에만 ___.wav가 한 번 재생됩니다.
+      */
+      playErrorMessageSound();
+
+      for (let index = 0; index < SETTINGS.errorScene.iterations; index += 1) {
+        if (index === SETTINGS.errorScene.violentAt) {
+          glitchOverlay.classList.add("violent");
+          whiteout.classList.add("error-flash");
+        }
+
+        if (index === SETTINGS.errorScene.terminalAt) {
+          glitchOverlay.classList.add("terminal");
+        }
+
+        const progress = index / Math.max(1, SETTINGS.errorScene.iterations - 1);
+        const amount = 1 + Math.floor(random(2, 4 + progress * 5));
+        const shakeX = 7 + progress * 14;
+        const shakeY = 2.5 + progress * 7;
 
         for (let count = 0; count < amount; count += 1) {
           appendDayLine(
@@ -2871,9 +3303,28 @@
           );
         }
 
-        setScreenShake(random(-8, 8), random(-2.4, 2.4));
-        await sleep(Math.max(48, 110 - index * 3));
+        timelineFeed.style.transform = `
+          translate(${random(-7, 7)}px, ${random(-4, 4)}px)
+          skewX(${random(-2.2, 2.2)}deg)
+        `;
+
+        setScreenShake(
+          random(-shakeX, shakeX),
+          random(-shakeY, shakeY)
+        );
+
+        await sleep(
+          Math.max(
+            SETTINGS.errorScene.minDelay,
+            SETTINGS.errorScene.baseDelay - index * 2
+          )
+        );
       }
+
+      /* 마지막 한 번은 화면 전체가 강하게 틀어진 뒤 즉시 검정으로 끊깁니다. */
+      setScreenShake(random(-24, 24), random(-11, 11));
+      glitchOverlay.classList.add("terminal");
+      await sleep(105);
 
       clearShake();
       await hardCutToFinal();
@@ -2883,7 +3334,14 @@
       playHardCutSound();
 
       hardBlack.classList.add("active");
-      glitchOverlay.classList.remove("active");
+
+      app.classList.remove("erroring");
+      createdScene.classList.remove("erroring");
+      timelineWindow.classList.remove("erroring");
+      glitchOverlay.classList.remove("active", "violent", "terminal");
+      whiteout.classList.remove("error-flash");
+      timelineFeed.style.removeProperty("transform");
+
       createdScene.hidden = true;
       createdScene.classList.remove("visible");
       timelineWindow.classList.remove("visible");
